@@ -1,0 +1,13 @@
+{
+  "id": "ts-20250720-b41e",
+  "attempt": "Event-sourced audit log with Kafka as the single write path",
+  "scope": ["src/audit/writer.py", "src/audit/schema.py"],
+  "rejected_at": "2025-07-20",
+  "rejected_by": "ci",
+  "reason": "Throughput collapsed under nightly batch load; p99 write latency hit 14s.",
+  "evidence": ["PR #297", "CI run 8841"],
+  "retry_when": "Batch writer decoupled from the request path.",
+  "status": "overturned",
+  "confidence": "approved",
+  "overturn_reason": "Retried in 2026-06 with a decoupled batch writer; landed as PR #512 and held for 60 days."
+}

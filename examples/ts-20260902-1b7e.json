@@ -1,0 +1,12 @@
+{
+  "id": "ts-20260902-1b7e",
+  "attempt": "Add per-request metrics flush in the worker hot path",
+  "scope": ["src/worker/pipeline.py"],
+  "rejected_at": "2026-09-02",
+  "rejected_by": "human-review",
+  "reason": "Auto-detected from revert commit 4b91c0d21a (Revert \"Add per-request metrics flush\"). Candidate pending human review: edit the reason and run `tombstone approve ts-20260902-1b7e`.",
+  "evidence": ["revert 4b91c0d21af3c8e2a1d0b7f6e5d4c3b2a1908f7e", "commit 77e0c15b9a4d3f2e1c0b9a8d7e6f5c4b3a29180f"],
+  "retry_when": "",
+  "status": "active",
+  "confidence": "candidate"
+}

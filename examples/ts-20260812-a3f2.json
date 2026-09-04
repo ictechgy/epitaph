@@ -1,0 +1,12 @@
+{
+  "id": "ts-20260812-a3f2",
+  "attempt": "Redis-based distributed lock to serialize session writes",
+  "scope": ["src/session/lock.py", "src/session/manager.py"],
+  "rejected_at": "2026-08-12",
+  "rejected_by": "human-review",
+  "reason": "Race window was not actually closed (retry storm under load); 3 tests went flaky in CI.",
+  "evidence": ["PR #412", "revert 9f2e1a", "session 2026-08-12T14:22"],
+  "retry_when": "Revisit once a fencing token sits in front of the lock.",
+  "status": "active",
+  "confidence": "approved"
+}

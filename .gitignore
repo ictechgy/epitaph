@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.venv/
+venv/
+.coverage
+htmlcov/
+
+# macOS
+.DS_Store
+
+# Editors
+.idea/
+.vscode/
+
+# NOTE: `.tombstones/` is intentionally NOT ignored. Tombstones are meant
+# to be committed and shared with the team (that is the point). If you are
+# working solo and prefer to keep them local, add `.tombstones/` to your
+# own global gitignore.
