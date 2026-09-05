@@ -157,6 +157,7 @@ a different path. Tombstones are records of past rejections, not bans.
 | `epitaph check [TEXT] [--file P]...` | Query by attempt text and/or files before retrying |
 | `epitaph detect [--full]` | Scan git history for reverts, draft candidate tombstones (incremental via `.cursor`) |
 | `epitaph giveup [--limit N]` | Scan agent session transcripts (Claude Code, Codex — discovered by format) for give-up transitions ("I'll try a different approach"), draft `rejected_by: agent-gaveup` candidates |
+| `epitaph stale [--apply]` | Audit active tombstones whose scope anchors are all gone from the repo (path missing / symbol not found) — report by default, `--apply` flips to `status: stale` |
 | `epitaph install-hook` | Install a post-commit hook that runs detect |
 
 Global: `--repo PATH` (default: cwd, walking up), `--version`.

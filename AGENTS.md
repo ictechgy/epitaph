@@ -16,6 +16,8 @@ src/epitaph/
   detect.py   git revert scanner (incremental via .tombstones/.cursor) + DetectReport
   transcripts.py  vendor-neutral transcript adapters (format-discovered, defensive,
               cwd-scoped) + deterministic give-up phrase patterns; EN + KO
+  stale.py    scope-anchor audit: path exists-check + symbol text scan (bounded,
+              stdlib-only); flips only when ALL anchors are gone
   render.py   THE match-report renderer — shared by CLI `check` and MCP `check_nogo`
   cli.py      argparse CLI (init/add/approve/overturn/list/show/check/detect/install-hook/snippets/review)
   mcp.py      zero-dep stdio JSON-RPC MCP server (read-only tools only)
@@ -49,6 +51,12 @@ python -m epitaph.mcp --repo /some/repo # MCP smoke (speak JSON-RPC on stdin)
   `rejected_by: agent-gaveup`, ids seeded with the session id + timestamp so
   rescans never duplicate. New vendors = new adapter in `ADAPTERS`, no vendor
   name may appear in `giveup`'s dispatch logic.
+- **Stale audit is conservative and human-gated**: a tombstone flips to stale
+  only when EVERY scope anchor is gone (partial survival keeps it active);
+  `epitaph stale` reports, `--apply` flips — same human-decision stance as
+  approve. Symbol anchors use a bounded text scan (skip VCS/build dirs,
+  >1MB files, binaries); a real symbol graph (IndexStoreDB etc.) may replace
+  the scan later but must keep this conservative flip rule.
 - **Matching haystack = `attempt + reason` only.** Scope paths are full of common words
   and match exclusively via the `files` argument (both directions). Query-side tokens drop
   stopwords; single-token queries need an exact token (no prefix fuzz, `"red" ↛ "redis"`);

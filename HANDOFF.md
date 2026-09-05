@@ -41,9 +41,14 @@ Read `AGENTS.md` first (invariants + gotchas), `기획서.md` for the original v
 
 ## 3. v0.3 — the differentiator
 
-- [ ] **Stale audit via symbol graphs**: a tombstone whose `scope` symbols no longer exist
-      should auto-flip to `status: stale`. Use IndexStoreDB (iOS) / Kotlin symbol extraction —
-      this is the maintainer's static-analysis edge and the main moat vs. generic memory tools.
+- [x] **Stale audit** — DONE 2026-09-06 (stdlib-only first cut): `epitaph stale [--apply]`
+      + `stale.py`. Path anchors → filesystem exists; symbol anchors → bounded text scan
+      (VCS/build dirs skipped, >1MB and binary files skipped, memoized per run). Flips
+      only when EVERY anchor is gone; report by default, `--apply` flips (human-gated
+      like approve). The IndexStoreDB/Kotlin symbol-graph upgrade remains open —
+      swapping the scan for a real symbol graph must keep the conservative flip rule
+      (see AGENTS.md invariant). This is the main moat vs. generic memory tools:
+      the ledger is *self-maintaining*, records expire when the code moves on.
 
 ## 4. Known small debts (P3, from review rounds)
 

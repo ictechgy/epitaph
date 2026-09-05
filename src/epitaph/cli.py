@@ -17,6 +17,7 @@ from .detect import (
 )
 from .detect import DetectError
 from .matcher import match_tombstones, normalized
+from .stale import StaleError, audit_stale
 from .transcripts import draft_tombstone, find_giveup_events
 from .render import format_matches
 from .schema import (
@@ -335,6 +336,42 @@ def cmd_review(args):
     return 0
 
 
+def cmd_stale(args):
+    """Report (and with --apply, flip) tombstones whose scope is all gone.
+
+    Flipping to stale is a human decision like approve — the default run
+    only shows what would flip.
+    """
+    store = _resolve_store(args, create=False)
+    repo = Path(args.repo or ".").resolve()
+    findings = audit_stale(repo, store)
+    records = store.all()
+    scoped_active = sum(1 for t in records if t.status == "active" and t.scope)
+    flipped = 0
+    for finding in findings:
+        tomb = finding.tombstone
+        anchors = ", ".join(finding.missing)
+        if args.apply:
+            tomb.status = "stale"
+            store.save(tomb)
+            flipped += 1
+            print("flipped to stale: %s  (anchors gone: %s)" % (tomb.id, anchors))
+        else:
+            print("stale candidate: %s  (anchors gone: %s)" % (tomb.id, anchors))
+        print("  attempt: %s" % (tomb.attempt[:70] if len(tomb.attempt) > 70 else tomb.attempt))
+    verb = "flipped" if args.apply else "would flip"
+    print("")
+    print(
+        "%d scoped active tombstone(s) audited, %d %s to stale"
+        % (scoped_active, flipped if args.apply else len(findings), verb)
+    )
+    if findings and not args.apply:
+        print("apply with: epitaph stale --apply")
+    if not findings:
+        print("no tombstone has outlived all of its scope anchors")
+    return 0
+
+
 def cmd_check(args):
     files = list(args.file or [])
     query = " ".join(args.query) if args.query else None
@@ -570,6 +607,17 @@ def build_parser():
     p.set_defaults(func=cmd_giveup)
 
     p = sub.add_parser(
+        "stale",
+        help="audit tombstones whose scope anchors no longer exist (report; --apply flips to stale)",
+    )
+    p.add_argument(
+        "--apply",
+        action="store_true",
+        help="actually flip matched tombstones to status: stale (human decision, like approve)",
+    )
+    p.set_defaults(func=cmd_stale)
+
+    p = sub.add_parser(
         "install-hook", help="install a post-commit hook that runs detect (never fails a commit)"
     )
     p.set_defaults(func=cmd_install_hook)
@@ -582,7 +630,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     try:
         return int(args.func(args) or 0)
-    except (CliError, StoreError, SchemaError) as exc:
+    except (CliError, StoreError, SchemaError, StaleError, DetectError) as exc:
         print("error: %s" % exc, file=sys.stderr)
         return 1
 
