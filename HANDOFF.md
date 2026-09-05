@@ -61,6 +61,15 @@ Read `AGENTS.md` first (invariants + gotchas), `기획서.md` for the original v
 - [x] Cold start: `init` recommends `detect` first (free tombstones from history);
       `init --detect` runs it immediately.
 - [x] Match reports capped at top 20 + "… and N more" (CLI + MCP, one renderer).
+- [x] detect full scans are O(1) git calls: batch `cat-file --batch-check` for
+      target existence + one `git log --stdin --name-only` for subjects/dates/files
+      (measured: 5 reverts → 4 git calls; was ~3-per-revert). Watch the record
+      separator: it must LEAD each record (`%x1e%H...`), a trailing one strands
+      the file list of record k inside chunk k+1.
+- [x] MCP server caches records on a per-file mtime signature; CLI edits to the
+      ledger are visible on the next tool call without re-reading every file.
+- [x] `epitaph add --from-commit SHA` prefills attempt/scope/evidence/rejected_at
+      (revert commits resolve their target; explicit flags win).
 - [x] `epitaph review` human approval loop (see above).
 
 ## Context pointers

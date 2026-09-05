@@ -8,7 +8,14 @@ import sys
 from pathlib import Path
 
 from . import __version__
-from .detect import detect
+from .detect import (
+    REVERTS_COMMIT_RE,
+    batch_commit_info,
+    commit_details,
+    detect,
+    existing_commits,
+)
+from .detect import DetectError
 from .matcher import match_tombstones, normalized
 from .render import format_matches
 from .schema import (
@@ -134,15 +141,49 @@ def cmd_init(args):
     return 0
 
 
+def _prefill_from_commit(args):
+    """Fill absent add-arguments from a commit; returns (attempt, scope, evidence, date)."""
+    repo = Path(args.repo or ".").resolve()
+    try:
+        subject, body, cdate = commit_details(repo, args.from_commit)
+    except DetectError as exc:
+        raise CliError(str(exc))
+    scope = batch_commit_info(repo, [args.from_commit])
+    entry = scope.get(args.from_commit) or next(iter(scope.values()), None)
+    files = entry[2] if entry else []
+    evidence = ["commit " + args.from_commit]
+    attempt = subject
+    match = REVERTS_COMMIT_RE.search((subject or "") + "\n" + (body or ""))
+    if match:
+        target = match.group(1)
+        if existing_commits(repo, [target]):
+            info = batch_commit_info(repo, [target])
+            t_entry = next(iter(info.values()), None)
+            attempt = (t_entry[0] if t_entry else "") or subject
+            if t_entry:
+                files = t_entry[2]
+            evidence = ["revert " + args.from_commit, "commit " + target]
+    return attempt, files, evidence, cdate
+
+
 def cmd_add(args):
     store = _resolve_store(args, create=True)
+    attempt, scope, evidence, date = args.attempt, _split_list(args.scope), _split_list(args.evidence), args.date
+    if args.from_commit:
+        p_attempt, p_scope, p_evidence, p_date = _prefill_from_commit(args)
+        attempt = attempt or p_attempt
+        scope = scope or p_scope
+        evidence = evidence or p_evidence
+        date = date or p_date
+    if not (attempt or "").strip():
+        raise CliError("provide --attempt or --from-commit (see `epitaph add --help`)")
     tomb = Tombstone(
-        attempt=args.attempt,
-        scope=_split_list(args.scope),
-        rejected_at=args.date or dt.date.today().isoformat(),
+        attempt=attempt,
+        scope=scope,
+        rejected_at=date or dt.date.today().isoformat(),
         rejected_by=args.rejected_by,
         reason=args.reason,
-        evidence=_split_list(args.evidence),
+        evidence=evidence,
         retry_when=args.retry_when or "",
         status=args.status,
         confidence=args.confidence,
@@ -399,7 +440,13 @@ def build_parser():
     p.set_defaults(func=cmd_snippets)
 
     p = sub.add_parser("add", help="record a rejected attempt (defaults to candidate)")
-    p.add_argument("--attempt", required=True, help="what was tried")
+    p.add_argument(
+        "--from-commit",
+        metavar="SHA",
+        default=None,
+        help="prefill attempt/scope/evidence/date from a commit (revert commits resolve their target)",
+    )
+    p.add_argument("--attempt", default=None, help="what was tried (required unless --from-commit)")
     p.add_argument("--reason", required=True, help="why it was rejected")
     p.add_argument(
         "--scope", nargs="+", default=[], metavar="PATH",

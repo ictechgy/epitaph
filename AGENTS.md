@@ -48,7 +48,9 @@ python -m epitaph.mcp --repo /some/repo # MCP smoke (speak JSON-RPC on stdin)
   `.tombstones/.cursor`; write the cursor only when the store exists (never create
   `.tombstones/` silently on a storeless repo); fall back to a full scan when the cursor
   is missing or stale (history rewrite). `--full` bypasses the cursor. Dates come from
-  `%cd` (committer), not `%ad`.
+  `%cd` (committer), not `%ad`. A scan is O(1) git calls (batch `cat-file
+  --batch-check` + one `git log --stdin --name-only`) — do not reintroduce
+  per-revert subprocess lookups.
 - **Hook argument order**: the installed hook runs `epitaph --repo "$(...)" detect`.
   `--repo` is a top-level argparse option and MUST precede the subcommand — the previous
   template put it after `detect` and argparse silently rejected it, disabling every hook

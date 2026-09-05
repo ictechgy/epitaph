@@ -4,6 +4,11 @@ tombstones. Deterministic rules only — no LLM, no network (v0.1 principle).
 A commit counts as a revert when its subject starts with `Revert "` and/or
 its body contains `This reverts commit <sha>`. Idempotency: the tombstone id
 is derived from the revert commit sha, so re-running detect never duplicates.
+
+Subprocess policy: a scan is O(1) git calls, not O(reverts) — existence is
+one `cat-file --batch-check`, subject/date/files for every target commit one
+`git log --no-walk --stdin --name-only`. Per-revert forks would make full
+scans of large histories pay thousands of process spawns.
 """
 from __future__ import annotations
 
@@ -33,8 +38,10 @@ class DetectReport:
     skipped: list = field(default_factory=list)
 
 
-def _git(repo, *args, check=True):
-    proc = subprocess.run(("git",) + args, cwd=str(repo), capture_output=True, text=True)
+def _git(repo, *args, check=True, input=None):
+    proc = subprocess.run(
+        ("git",) + args, cwd=str(repo), capture_output=True, text=True, input=input
+    )
     if check and proc.returncode != 0:
         raise DetectError("`git %s` failed: %s" % (" ".join(args), proc.stderr.strip()))
     return proc
@@ -83,10 +90,6 @@ def is_revert(subject, body):
     return subject.startswith(REVERT_PREFIX) or bool(REVERTS_COMMIT_RE.search(body or ""))
 
 
-def _commit_exists(repo, sha):
-    return _git(repo, "cat-file", "-e", sha + "^{commit}", check=False).returncode == 0
-
-
 def _strip_revert_wrapper(subject):
     stripped = subject
     if stripped.startswith(REVERT_PREFIX):
@@ -96,13 +99,80 @@ def _strip_revert_wrapper(subject):
     return stripped
 
 
-def _commit_subject(repo, sha):
-    return _git(repo, "log", "-1", "--pretty=%s", sha).stdout.strip()
+def existing_commits(repo, shas):
+    """Subset of `shas` that exist as commits — one cat-file call.
+
+    `--batch-check` answers one line per input object, in input order, so
+    abbreviated shas keep their original spelling for downstream git calls.
+    """
+    shas = list(dict.fromkeys(shas))
+    if not shas:
+        return set()
+    proc = _git(
+        repo,
+        "cat-file", "--batch-check=%(objecttype)",
+        check=False,
+        input="\n".join(shas) + "\n",
+    )
+    if proc.returncode != 0:
+        # One malformed line poisons the whole batch; fall back to per-sha.
+        return {s for s in shas if _git(repo, "cat-file", "-e", s + "^{commit}", check=False).returncode == 0}
+    out = set()
+    for sha, line in zip(shas, proc.stdout.splitlines()):
+        if line.strip() == "commit":
+            out.add(sha)
+    return out
 
 
-def _commit_files(repo, sha):
-    out = _git(repo, "show", "--name-only", "--pretty=format:", sha).stdout
-    return sorted({line.strip() for line in out.splitlines() if line.strip()})
+def batch_commit_info(repo, shas):
+    """{full sha: (subject, committer-date, [files])} — one git log call.
+
+    The record separator leads each record (%x1e%H...): a trailing one would
+    strand the `--name-only` file list of record k inside chunk k+1.
+    """
+    shas = list(dict.fromkeys(shas))
+    if not shas:
+        return {}
+    fmt = "--pretty=format:%x1e%H%x1f%s%x1f%cd%x1f"
+    proc = _git(
+        repo,
+        "log", "--no-walk", "--stdin", "--date=short", "--name-only", fmt,
+        check=False,
+        input="\n".join(shas) + "\n",
+    )
+    if proc.returncode != 0:
+        return {}
+    info = {}
+    for chunk in proc.stdout.split(_RECORD):
+        parts = chunk.strip("\n").split(_FIELD)
+        if len(parts) != 4 or not re.fullmatch(r"[0-9a-f]{7,40}", parts[0]):
+            continue
+        files = sorted({ln.strip() for ln in parts[3].splitlines() if ln.strip()})
+        info[parts[0]] = (parts[1], parts[2], files)
+    return info
+
+
+def commit_details(repo, sha):
+    """(subject, body, committer-date) of one commit — raises if unknown."""
+    proc = _git(
+        repo,
+        "log", "-1", "--no-walk", "--date=short",
+        "--pretty=format:%H%x1f%s%x1f%b%x1f%cd%x1e",
+        sha,
+        check=False,
+    )
+    parsed = _parse_log(proc.stdout)
+    if proc.returncode != 0 or not parsed:
+        raise DetectError("no such commit: %s" % sha)
+    return parsed[0][1], parsed[0][2], parsed[0][3]
+
+
+def _lookup(info, abbrev):
+    """Resolve an abbreviated sha against batch_commit_info's full-sha keys."""
+    for full in info:
+        if full.startswith(abbrev):
+            return full
+    return None
 
 
 def detect(repo, store=None, full=False) -> DetectReport:
@@ -121,25 +191,41 @@ def detect(repo, store=None, full=False) -> DetectReport:
         if recorded:
             since = recorded
 
-    for sha, subject, body, date in scan_reverts(repo, since=since):
-        if not is_revert(subject, body):
-            continue
-        report.reverts += 1
+    reverts = []
+    for commit in scan_reverts(repo, since=since):
+        if is_revert(commit[1], commit[2]):
+            reverts.append(commit)
+    report.reverts = len(reverts)
+
+    # Prefetch everything the loop needs in two git calls: which revert
+    # targets still exist, and subject/date/files for both the targets and
+    # the revert commits themselves (the latter scope the fallback path).
+    targets = []
+    for sha, subject, body, _date in reverts:
+        match = REVERTS_COMMIT_RE.search((subject or "") + "\n" + (body or ""))
+        if match:
+            targets.append(match.group(1))
+    existing = existing_commits(repo, targets)
+    info = batch_commit_info(repo, list(existing) + [c[0] for c in reverts])
+
+    for sha, subject, body, date in reverts:
         tomb_id = make_id(date, "revert", sha)
         if store.has(tomb_id):
             report.skipped.append(tomb_id)
             continue
         match = REVERTS_COMMIT_RE.search((subject or "") + "\n" + (body or ""))
         reverted = ""
-        if match and _commit_exists(repo, match.group(1)):
+        if match and match.group(1) in existing:
             reverted = match.group(1)
         if reverted:
-            attempt = _commit_subject(repo, reverted) or _strip_revert_wrapper(subject)
-            scope = _commit_files(repo, reverted)
+            entry = info.get(_lookup(info, reverted) or "")
+            attempt = (entry[0] if entry else "") or _strip_revert_wrapper(subject)
+            scope = entry[2] if entry else []
             evidence = ["revert " + sha, "commit " + reverted]
         else:
+            entry = info.get(sha)
             attempt = _strip_revert_wrapper(subject)
-            scope = _commit_files(repo, sha)
+            scope = entry[2] if entry else []
             evidence = ["revert " + sha]
         tomb = store.add(
             Tombstone(

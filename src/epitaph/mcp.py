@@ -94,6 +94,9 @@ class Server:
     def __init__(self, repo=None):
         self._repo = repo
         self._store = None
+        self._cache_records = None
+        self._cache_skipped = []
+        self._cache_sig = object()  # never equal to a real signature
 
     @property
     def store(self) -> TombstoneStore:
@@ -101,6 +104,27 @@ class Server:
             root = self._repo or os.environ.get("EPITAPH_REPO") or "."
             self._store = TombstoneStore.find(root) or TombstoneStore(Path(root).resolve())
         return self._store
+
+    def records(self):
+        """store.all(), cached until a record file is added/changed/removed.
+
+        The server is long-lived while humans keep editing the ledger via the
+        CLI; a stat signature (name + mtime per file) costs one directory
+        walk and keeps tool calls from re-reading every JSON file each time.
+        """
+        try:
+            sig = tuple(
+                sorted((p.name, p.stat().st_mtime_ns) for p in self.store.dir.glob("*.json"))
+            )
+        except OSError:
+            sig = None
+        if self._cache_sig != sig:
+            self._cache_records = self.store.all()
+            self._cache_skipped = list(self.store.last_skipped)
+            self._cache_sig = sig
+        else:
+            self.store.last_skipped = list(self._cache_skipped)
+        return self._cache_records
 
     def handle(self, msg):
         """One decoded JSON-RPC message -> response dict, or None (notification)."""
@@ -182,7 +206,7 @@ class Server:
             raise ValueError(
                 "provide 'attempt' (text) and/or 'files' (paths you are about to modify)."
             )
-        records = self.store.all()
+        records = self.records()
         if not records:
             return (
                 "no tombstones recorded in %s yet — nothing known against this "
@@ -199,7 +223,7 @@ class Server:
         limit = args.get("limit", 10)
         if isinstance(limit, bool) or not isinstance(limit, int) or limit <= 0:
             limit = 10
-        records = self.store.all()
+        records = self.records()
         if scope:
             needle = normalized(scope)
             records = [

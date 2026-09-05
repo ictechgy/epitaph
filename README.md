@@ -148,7 +148,7 @@ a different path. Tombstones are records of past rejections, not bans.
 |---|---|
 | `epitaph init` | Create `.tombstones/` in the target repo. `--detect` immediately mines existing history for reverts; `--snippets` also injects the rule below |
 | `epitaph snippets` | Inject the recommended `check_nogo` rule into `AGENTS.md` (and `CLAUDE.md` if present) — idempotent |
-| `epitaph add --attempt T --reason R [--scope P...] [--evidence R...] [--rejected-by WHO] [--retry-when W] [--date YYYY-MM-DD] [--confidence C] [--status S]` | Record a rejection (defaults to `candidate`) |
+| `epitaph add --attempt T --reason R [--from-commit SHA] [--scope P...] [--evidence R...] [--rejected-by WHO] [--retry-when W] [--date YYYY-MM-DD] [--confidence C] [--status S]` | Record a rejection (defaults to `candidate`). `--from-commit` prefills attempt/scope/evidence/date from a commit — a revert resolves its target — explicit flags win |
 | `epitaph approve <id>` | Promote a tombstone to `approved` (one human line) |
 | `epitaph review` | Walk candidates one by one: approve / skip / quit (interactive, human-only; closed stdin approves nothing) |
 | `epitaph overturn <id> --reason R` | A retry succeeded — keep the refutation on record |
