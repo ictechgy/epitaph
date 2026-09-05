@@ -2,7 +2,7 @@ import re
 
 import pytest
 
-from tombstone.schema import (
+from epitaph.schema import (
     FIELDS,
     SchemaError,
     Tombstone,

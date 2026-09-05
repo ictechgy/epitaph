@@ -2,7 +2,7 @@
 
 > Every agent memory accumulates successes and preferences. **tombstone** accumulates refusals: it records rejected patches, rolled-back approaches, and abandoned paths as structured tombstones inside your repo — so the next agent checks before walking the same dead end. *"This approach was buried here, in this module, on August 12."*
 
-**Status:** v0.1 (deterministic core). Distribution name is **`epitaph`** (decided 2026-09-05; the working name `tombstone` collided with Android crash dumps / Cassandra). The import module is still `tombstone`, records are still "tombstones" living in `.tombstones/` — only the PyPI/repo/console-script name changed.
+**Status:** v0.1 (deterministic core). Distribution name is **`epitaph`** (decided 2026-09-05; the working name `tombstone` collided with Android crash dumps / Cassandra). Import module and CLI are `epitaph` too; records are still "tombstones" living in `.tombstones/`.
 
 ## The problem: failure knowledge evaporates three times
 
@@ -84,8 +84,8 @@ See [`examples/`](examples/) for full records.
 Zero-dependency stdio MCP server (JSON-RPC 2.0, no `mcp` package needed):
 
 ```bash
-python -m tombstone.mcp          # repo resolved from cwd, walking up
-python -m tombstone.mcp --repo /path/to/repo
+python -m epitaph.mcp          # repo resolved from cwd, walking up
+python -m epitaph.mcp --repo /path/to/repo
 ```
 
 Two tools:
@@ -100,14 +100,14 @@ Claude Code config (`.mcp.json` in the project root, or `~/.claude.json`):
   "mcpServers": {
     "epitaph": {
       "command": "python3",
-      "args": ["-m", "tombstone.mcp"],
-      "env": { "TOMBSTONE_REPO": "/absolute/path/to/your/repo" }
+      "args": ["-m", "epitaph.mcp"],
+      "env": { "EPITAPH_REPO": "/absolute/path/to/your/repo" }
     }
   }
 }
 ```
 
-Or with the CLI: `claude mcp add epitaph -- python3 -m tombstone.mcp` (run from the repo root; the server resolves the repo from its working directory if `TOMBSTONE_REPO` is unset).
+Or with the CLI: `claude mcp add epitaph -- python3 -m epitaph.mcp` (run from the repo root; the server resolves the repo from its working directory if `EPITAPH_REPO` is unset).
 
 The server is a plain stdio JSON-RPC process — any MCP-capable client works. Cursor (`.cursor/mcp.json`):
 
@@ -116,8 +116,8 @@ The server is a plain stdio JSON-RPC process — any MCP-capable client works. C
   "mcpServers": {
     "epitaph": {
       "command": "python3",
-      "args": ["-m", "tombstone.mcp"],
-      "env": { "TOMBSTONE_REPO": "/absolute/path/to/your/repo" }
+      "args": ["-m", "epitaph.mcp"],
+      "env": { "EPITAPH_REPO": "/absolute/path/to/your/repo" }
     }
   }
 }
@@ -128,8 +128,8 @@ Codex (`~/.codex/config.toml`):
 ```toml
 [mcp_servers.epitaph]
 command = "python3"
-args = ["-m", "tombstone.mcp"]
-env = { TOMBSTONE_REPO = "/absolute/path/to/your/repo" }
+args = ["-m", "epitaph.mcp"]
+env = { EPITAPH_REPO = "/absolute/path/to/your/repo" }
 ```
 
 Clients without MCP support can use the CLI instead — `tombstone check "..." --file path` produces the same match report through the same renderer.

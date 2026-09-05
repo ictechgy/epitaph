@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from tombstone.schema import Tombstone
-from tombstone.store import DIRNAME, StoreError, TombstoneStore
+from epitaph.schema import Tombstone
+from epitaph.store import DIRNAME, StoreError, TombstoneStore
 
 
 def make_tomb(**over):

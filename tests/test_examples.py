@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from tombstone.schema import Tombstone
+from epitaph.schema import Tombstone
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
 

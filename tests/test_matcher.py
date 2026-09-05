@@ -1,10 +1,10 @@
-from tombstone.matcher import (
+from epitaph.matcher import (
     match_one,
     match_tombstones,
     normalized,
     tokenize,
 )
-from tombstone.schema import Tombstone
+from epitaph.schema import Tombstone
 
 
 def make_tomb(**over):

@@ -8,7 +8,8 @@ Read `AGENTS.md` first (invariants + gotchas), `기획서.md` for the original v
 - [ ] **Ship it**: create the GitHub repo, push, confirm the Actions CI workflow goes green
       (`.github/workflows/ci.yml` exists but has never run).
 - [x] **Name decision** — DONE 2026-09-05: dist/repo/console-script name is **`epitaph`**
-      (PyPI + GitHub verified clear). Import module stays `tombstone`; records stay
+      (PyPI + GitHub verified clear), and the import module moved to `src/epitaph/`
+      before the first release (env var is now `EPITAPH_REPO`). Records stay
       "tombstones" in `.tombstones/`; user-facing strings say `epitaph <subcommand>`.
 - [ ] Publish to PyPI (after name), then flip README install line from "from a checkout" to real install commands (`uvx`/`pipx`).
 

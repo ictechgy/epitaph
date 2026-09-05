@@ -1,11 +1,11 @@
 """Zero-dependency MCP server for tombstone (stdio, newline-delimited
-JSON-RPC 2.0). Run with `python -m tombstone.mcp [--repo PATH]`.
+JSON-RPC 2.0). Run with `python -m epitaph.mcp [--repo PATH]`.
 
 Implements the MCP handshake (`initialize`, `notifications/initialized`,
 `tools/list`, `tools/call`, plus `ping`) with two tools:
 `check_nogo(attempt?, files?)` and `recent_tombstones(scope?, limit?)`.
 
-Repository resolution order: --repo flag > TOMBSTONE_REPO env var >
+Repository resolution order: --repo flag > EPITAPH_REPO env var >
 walk up from the working directory. Fully local; no network calls.
 """
 from __future__ import annotations
@@ -98,7 +98,7 @@ class Server:
     @property
     def store(self) -> TombstoneStore:
         if self._store is None:
-            root = self._repo or os.environ.get("TOMBSTONE_REPO") or "."
+            root = self._repo or os.environ.get("EPITAPH_REPO") or "."
             self._store = TombstoneStore.find(root) or TombstoneStore(Path(root).resolve())
         return self._store
 
@@ -243,7 +243,7 @@ def process_line(line, server):
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
-        prog="python -m tombstone.mcp",
+        prog="python -m epitaph.mcp",
         description="tombstone MCP server (stdio, zero dependencies)",
     )
     parser.add_argument("--repo", default=None, help="repository root (default: cwd walk-up)")

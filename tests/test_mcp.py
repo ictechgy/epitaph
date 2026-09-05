@@ -3,9 +3,9 @@ import json
 
 import pytest
 
-from tombstone.mcp import Server, main as mcp_main, process_line
-from tombstone.schema import Tombstone
-from tombstone.store import TombstoneStore
+from epitaph.mcp import Server, main as mcp_main, process_line
+from epitaph.schema import Tombstone
+from epitaph.store import TombstoneStore
 
 
 def call(server, payload):

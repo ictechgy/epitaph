@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from tombstone.cli import main
-from tombstone.store import TombstoneStore
+from epitaph.cli import main
+from epitaph.store import TombstoneStore
 
 
 def _git(cwd, *args):

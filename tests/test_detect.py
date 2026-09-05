@@ -2,8 +2,8 @@ import subprocess
 
 import pytest
 
-from tombstone.detect import detect
-from tombstone.store import TombstoneStore
+from epitaph.detect import detect
+from epitaph.store import TombstoneStore
 
 
 def git(repo, *args):

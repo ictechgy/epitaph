@@ -28,7 +28,7 @@ classifiers = [
 dependencies = []
 
 [project.scripts]
-epitaph = "tombstone.cli:main"
+epitaph = "epitaph.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -37,4 +37,4 @@ where = ["src"]
 testpaths = ["tests"]
 
 [tool.setuptools.dynamic]
-version = { attr = "tombstone.__version__" }
+version = { attr = "epitaph.__version__" }

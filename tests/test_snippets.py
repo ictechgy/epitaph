@@ -1,6 +1,6 @@
 import pytest
 
-from tombstone.cli import main, SNIPPET, SNIPPET_BEGIN
+from epitaph.cli import main, SNIPPET, SNIPPET_BEGIN
 
 
 @pytest.fixture

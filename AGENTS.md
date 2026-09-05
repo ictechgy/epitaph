@@ -9,13 +9,13 @@ deadends.dev / Mem0 / ADRs.
 ## Layout
 
 ```
-src/tombstone/
+src/epitaph/
   schema.py   record schema, strict validate(), ID_RE (ts-YYYYMMDD-<4 hex>), make_id (sha-seeded)
   store.py    TombstoneStore: one JSON file per record under .tombstones/, tolerant all()
   matcher.py  deterministic matching: normalize → substring / token-overlap (+ stopwords, query side)
   detect.py   git revert scanner (incremental via .tombstones/.cursor) + DetectReport
   render.py   THE match-report renderer — shared by CLI `check` and MCP `check_nogo`
-  cli.py      argparse CLI (init/add/approve/overturn/list/show/check/detect/install-hook)
+  cli.py      argparse CLI (init/add/approve/overturn/list/show/check/detect/install-hook/snippets)
   mcp.py      zero-dep stdio JSON-RPC MCP server (read-only tools only)
 examples/     valid tombstone records shown in the README
 tests/        pytest; detect tests build real temp git repos via subprocess
@@ -26,7 +26,7 @@ tests/        pytest; detect tests build real temp git repos via subprocess
 ```bash
 pip install -e . && pip install pytest   # zero runtime deps; pytest is test-only
 pytest                                    # from repo root
-python -m tombstone.mcp --repo /some/repo # MCP smoke (speak JSON-RPC on stdin)
+python -m epitaph.mcp --repo /some/repo # MCP smoke (speak JSON-RPC on stdin)
 ```
 
 ## Invariants — do not break
@@ -70,7 +70,7 @@ python -m tombstone.mcp --repo /some/repo # MCP smoke (speak JSON-RPC on stdin)
 - `matcher.py` semantics → README "check" paragraph + `tests/test_matcher.py`.
 - Record schema → README record-schema block + `examples/` + `tests/test_schema.py`.
 - `render.py` wording → `tests/test_mcp.py` and `tests/test_cli.py` assertions.
-- Naming (decided 2026-09-05): PyPI/repo/console-script name is **`epitaph`**; the
-  import module stays `tombstone`, records stay "tombstones" in `.tombstones/`.
+- Naming (decided 2026-09-05): dist/repo/console-script/import module are all
+  **`epitaph`** (`src/epitaph/`); records stay "tombstones" in `.tombstones/`.
   User-facing command strings say `epitaph <subcommand>`. The hook invokes bare
   `epitaph` — keep the regression test green after touching it.
