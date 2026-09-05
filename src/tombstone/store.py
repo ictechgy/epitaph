@@ -6,6 +6,8 @@ One file per record keeps git merges small and partial adoption easy
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from pathlib import Path
 
 from .schema import ID_RE, SchemaError, Tombstone, make_id, validate
@@ -59,15 +61,29 @@ class TombstoneStore:
         return tomb
 
     def save(self, tomb: Tombstone) -> None:
-        """Validate and write a record (insert or update)."""
+        """Validate and write a record (insert or update).
+
+        Written via temp-file + rename so a crash mid-write can never leave a
+        half-written record — the ledger is committed to git, and a truncated
+        JSON would silently skip in all() ever after.
+        """
         data = tomb.to_dict()
         validate(data)
         if not ID_RE.match(tomb.id or ""):
             raise StoreError("refusing to save a record without a valid id")
         self.create()
-        self.path_for(tomb.id).write_text(
-            json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-        )
+        payload = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+        fd, tmp = tempfile.mkstemp(dir=str(self.dir), prefix=".tmp-", suffix="")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(payload)
+            os.replace(tmp, self.path_for(tomb.id))
+        except BaseException:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            raise
 
     def get(self, tomb_id: str):
         # Validate the id before it ever touches the filesystem, so a
@@ -91,10 +107,16 @@ class TombstoneStore:
         if not self.exists():
             return records
         for path in sorted(self.dir.glob("*.json")):
+            if path.name.startswith("."):
+                # hidden = our own interrupted temp files, never records
+                continue
             try:
                 records.append(
                     Tombstone.from_dict(json.loads(path.read_text(encoding="utf-8")))
                 )
-            except (json.JSONDecodeError, SchemaError, UnicodeDecodeError):
+            except (OSError, json.JSONDecodeError, SchemaError, UnicodeDecodeError):
+                # OSError included: a file we can't stat/read (permissions,
+                # dangling symlink, a directory named *.json) must not break
+                # listing either.
                 self.last_skipped.append(path.name)
         return records

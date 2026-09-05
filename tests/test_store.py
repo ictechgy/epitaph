@@ -115,3 +115,24 @@ def test_get_rejects_non_tombstone_ids(tmp_path):
     # never touches the filesystem, so no traversal via crafted ids
     assert store.get("../../evil") is None
     assert store.get("") is None
+
+
+def test_save_is_atomic_no_temp_left_behind(tmp_path):
+    store = TombstoneStore(tmp_path)
+    tomb = Tombstone(attempt="x", reason="y", rejected_at="2026-09-05", rejected_by="human-review")
+    store.add(tomb, seed=("t",))
+    leftovers = [p.name for p in store.dir.iterdir() if p.name.startswith(".tmp-")]
+    assert leftovers == []
+    assert json.loads(store.path_for(tomb.id).read_text())["attempt"] == "x"
+
+
+def test_all_skips_unreadable_entries(tmp_path):
+    store = TombstoneStore(tmp_path)
+    store.create()
+    good = Tombstone(attempt="good", reason="r", rejected_at="2026-09-05", rejected_by="human-review")
+    store.add(good, seed=("g",))
+    # a directory named *.json raises IsADirectoryError (an OSError) on read
+    (store.dir / "ts-20260905-dead.json").mkdir()
+    records = store.all()
+    assert [t.id for t in records] == [good.id]
+    assert store.last_skipped == ["ts-20260905-dead.json"]
