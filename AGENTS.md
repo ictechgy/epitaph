@@ -14,6 +14,8 @@ src/epitaph/
   store.py    TombstoneStore: one JSON file per record under .tombstones/, tolerant all()
   matcher.py  deterministic matching: normalize → substring / token-overlap (+ stopwords, query side)
   detect.py   git revert scanner (incremental via .tombstones/.cursor) + DetectReport
+  transcripts.py  vendor-neutral transcript adapters (format-discovered, defensive,
+              cwd-scoped) + deterministic give-up phrase patterns; EN + KO
   render.py   THE match-report renderer — shared by CLI `check` and MCP `check_nogo`
   cli.py      argparse CLI (init/add/approve/overturn/list/show/check/detect/install-hook/snippets/review)
   mcp.py      zero-dep stdio JSON-RPC MCP server (read-only tools only)
@@ -40,6 +42,13 @@ python -m epitaph.mcp --repo /some/repo # MCP smoke (speak JSON-RPC on stdin)
 - **Tombstones are testimony, not verdicts**: never emit "impossible" language;
   `retry_when` is expected on records; only the human `approve` command reaches
   `approved` confidence — an agent must never self-approve.
+- **Transcript reading is read-only, format-discovered, cwd-scoped**:
+  `transcripts.py` adapters prove a transcript belongs to the repo via its own
+  `cwd` fields before yielding anything, skip anything malformed, and never
+  write outside `.tombstones/`. Give-up drafts are always `candidate` +
+  `rejected_by: agent-gaveup`, ids seeded with the session id + timestamp so
+  rescans never duplicate. New vendors = new adapter in `ADAPTERS`, no vendor
+  name may appear in `giveup`'s dispatch logic.
 - **Matching haystack = `attempt + reason` only.** Scope paths are full of common words
   and match exclusively via the `files` argument (both directions). Query-side tokens drop
   stopwords; single-token queries need an exact token (no prefix fuzz, `"red" ↛ "redis"`);

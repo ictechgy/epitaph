@@ -21,17 +21,17 @@ Read `AGENTS.md` first (invariants + gotchas), `기획서.md` for the original v
 - [x] **AGENTS.md snippet generator** — DONE: `epitaph snippets` (and `init --snippets`).
       Creates `AGENTS.md` if absent, appends the check_nogo rule idempotently, touches
       `CLAUDE.md` only when it already exists (never forks the source of truth).
-- [ ] **Session give-up detection**: parse agent transcripts for "I'll try a different
-      approach" transitions and draft `rejected_by: agent-gaveup` candidates.
-      Start from the transcript adapter in the sibling project `../yield-audit`
-      (`src/yield_audit/transcripts.py`) — but note it is **Claude Code-only**
-      (reads `~/.claude/projects/<munged-cwd>/*.jsonl`). Vendor decision: tombstone
-      itself must stay vendor-agnostic — define a small adapter interface
-      (e.g. `iter_transcripts(repo) -> TranscriptEvents`, detected by format, not
-      by vendor name), ship the Claude Code adapter first, and leave adapters for
-      other vendors (Codex session logs, Cursor history) as drop-ins. README's
-      MCP section already documents Cursor/Codex config; keep give-up detection
-      documented the same way ("Claude Code today, adapter interface for the rest").
+- [x] **Session give-up detection** — DONE 2026-09-06 (after v0.2.0 shipped):
+      `epitaph giveup [--limit N]` + `transcripts.py`. Format-discovered adapters
+      (Claude Code munged-dir shortcut + Codex rollout format — both cwd-scoped,
+      key-based defensive parsing, EN+KO give-up patterns). Drafts are always
+      `candidate` / `rejected_by: agent-gaveup`; ids seeded with (vendor, session,
+      message ts) so rescans never duplicate; storeless repos get counts + an
+      init hint, never a silently created ledger. yield-audit's transcripts/
+      package (base/claude/codex) was mined for the schema groundings — its
+      adapter contract is the reference if more vendors are added.
+      Note: yield-audit's own module evolved past the single claude.py file this
+      entry originally referenced.
 - [ ] **LLM drafter (optional flag)**: propose attempt/reason drafts for manual `add` and
       revert candidates. Must stay optional — v0.1 is fully functional without it.
       Priority note: convenience only — the stale audit (§3) is the real moat;

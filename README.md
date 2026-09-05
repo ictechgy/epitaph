@@ -156,6 +156,7 @@ a different path. Tombstones are records of past rejections, not bans.
 | `epitaph show <id>` | Print one tombstone in full |
 | `epitaph check [TEXT] [--file P]...` | Query by attempt text and/or files before retrying |
 | `epitaph detect [--full]` | Scan git history for reverts, draft candidate tombstones (incremental via `.cursor`) |
+| `epitaph giveup [--limit N]` | Scan agent session transcripts (Claude Code, Codex — discovered by format) for give-up transitions ("I'll try a different approach"), draft `rejected_by: agent-gaveup` candidates |
 | `epitaph install-hook` | Install a post-commit hook that runs detect |
 
 Global: `--repo PATH` (default: cwd, walking up), `--version`.
@@ -166,7 +167,7 @@ Global: `--repo PATH` (default: cwd, walking up), `--version`.
 
 | Stage | Owner | Notes |
 |---|---|---|
-| Detect | deterministic rules (no LLM) | git revert commits today; never-merged PR closes, session give-up transitions, and CI-failure branch abandonment are on the roadmap |
+| Detect | deterministic rules (no LLM) | git revert commits (`detect`) and session give-up transitions (`giveup`, transcripts read locally for the repo's cwd only — Claude Code and Codex formats today, adapters are drop-ins); never-merged PR closes and CI-failure branch abandonment are on the roadmap |
 | Draft | optional LLM (v0.2) | v0.1 works fully without drafting |
 | Approve | one human line | `epitaph approve ts-...`. **An agent may never judge on its own** — a tombstone is testimony, not a verdict |
 | Query | MCP tools + CLI | `check_nogo` / `recent_tombstones` / `epitaph check` |

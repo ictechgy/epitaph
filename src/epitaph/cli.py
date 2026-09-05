@@ -17,9 +17,11 @@ from .detect import (
 )
 from .detect import DetectError
 from .matcher import match_tombstones, normalized
+from .transcripts import draft_tombstone, find_giveup_events
 from .render import format_matches
 from .schema import (
     CONFIDENCE_VALUES,
+    make_id,
     FIELDS,
     REJECTED_BY_VALUES,
     STATUS_VALUES,
@@ -365,6 +367,44 @@ def cmd_detect(args):
     return 0
 
 
+def cmd_giveup(args):
+    """Draft `rejected_by: agent-gaveup` candidates from session transcripts.
+
+    Deterministic matching only; drafts always land as candidates — only
+    `review`/`approve` (a human) can promote them.
+    """
+    repo = Path(args.repo or ".").resolve()
+    events = find_giveup_events(repo)
+    limit = args.limit
+    if limit and limit > 0:
+        events = events[:limit]
+    store = TombstoneStore(repo)
+    if not store.exists():
+        print(
+            "%d give-up transition(s) found in local transcripts — run "
+            "`epitaph init` to start a ledger and draft them." % len(events)
+        )
+        return 0
+    created, skipped = [], []
+    for event in events:
+        tomb = draft_tombstone(event)
+        tomb_id = make_id(tomb.rejected_at, "giveup", event.vendor, event.session_id, event.ts)
+        if store.has(tomb_id):
+            skipped.append(tomb_id)
+            continue
+        tomb.id = tomb_id
+        store.add(tomb)
+        created.append(tomb_id)
+        print("created %s (candidate) — %s" % (tomb_id, tomb.attempt[:60]))
+    print(
+        "%d give-up transition(s), %d drafted, %d already recorded"
+        % (len(events), len(created), len(skipped))
+    )
+    if created:
+        print("next: epitaph review   # a human decides which drafts survive")
+    return 0
+
+
 def cmd_install_hook(args):
     repo = Path(args.repo or ".").resolve()
     proc = subprocess.run(
@@ -515,6 +555,19 @@ def build_parser():
         help="ignore the .cursor position and rescan the full history (never duplicates)",
     )
     p.set_defaults(func=cmd_detect)
+
+    p = sub.add_parser(
+        "giveup",
+        help="scan agent session transcripts for give-up transitions and draft candidates",
+    )
+    p.add_argument(
+        "--limit",
+        type=int,
+        default=20,
+        metavar="N",
+        help="max drafts this run, newest first (0 = unlimited; default 20)",
+    )
+    p.set_defaults(func=cmd_giveup)
 
     p = sub.add_parser(
         "install-hook", help="install a post-commit hook that runs detect (never fails a commit)"
