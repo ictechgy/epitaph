@@ -106,13 +106,31 @@ def _get_or_fail(store, tomb_id):
 def cmd_init(args):
     store = _resolve_store(args, create=True)
     print("initialized %s" % store.dir)
+    report = None
+    if getattr(args, "detect", False):
+        report = detect(Path(args.repo or ".").resolve())
+        for tomb_id in report.created:
+            print("created %s (candidate)" % tomb_id)
+        print(
+            "%d revert commit(s) scanned, %d created, %d already recorded"
+            % (report.reverts, len(report.created), len(report.skipped))
+        )
+    if getattr(args, "snippets", False):
+        cmd_snippets(args)
+    print("next steps (in this order):")
+    if report and report.created:
+        print(
+            "  1. epitaph review        # %d candidate(s) await a human decision"
+            % len(report.created)
+        )
+    else:
+        print("  1. epitaph detect        # mine existing history for reverts — first tombstones, free")
+    print("  2. epitaph install-hook  # keep detecting reverts after every commit")
+    print("  3. epitaph snippets      # teach agents the check_nogo rule (AGENTS.md)")
     print(
-        'next: epitaph add --attempt "..." --reason "..." --scope src/foo.py '
+        '  4. epitaph add --attempt "..." --reason "..." --scope src/foo.py '
         '[--retry-when "..."]'
     )
-    if getattr(args, "snippets", False):
-        return cmd_snippets(args)
-    print("also consider: epitaph snippets (inject the check_nogo rule into AGENTS.md)")
     return 0
 
 
@@ -204,9 +222,7 @@ def cmd_list(args):
     return 0
 
 
-def cmd_show(args):
-    store = _resolve_store(args, create=False)
-    tomb = _get_or_fail(store, args.id)
+def _print_tombstone(store, tomb):
     data = tomb.to_dict()
     for key in FIELDS:
         value = data[key]
@@ -221,6 +237,58 @@ def cmd_show(args):
     for key, value in tomb.extra.items():
         print("%s: %s" % (key, value))
     print("file: %s" % store.path_for(tomb.id))
+
+
+def cmd_show(args):
+    store = _resolve_store(args, create=False)
+    tomb = _get_or_fail(store, args.id)
+    _print_tombstone(store, tomb)
+    return 0
+
+
+def cmd_review(args):
+    """Walk candidates one by one; only a human deciding now may approve.
+
+    Non-interactive stdin (EOF) stops the walk without approving anything —
+    an agent piping input must never be able to self-approve.
+    """
+    store = _resolve_store(args, create=False)
+    records = [t for t in store.all() if t.confidence == "candidate" and t.status == "active"]
+    records.sort(key=lambda t: (t.rejected_at, t.id))
+    if not records:
+        print("no candidates awaiting review")
+        return 0
+    approved = skipped = 0
+    for index, tomb in enumerate(records, start=1):
+        print("")
+        print("=" * 60)
+        _print_tombstone(store, tomb)
+        try:
+            answer = input(
+                "approve? [y]es / [n]o / [q]uit (%d left): " % (len(records) - index)
+            ).strip().lower()
+        except EOFError:
+            print("\nstdin closed — stopping without approving the rest.")
+            break
+        if answer in ("y", "yes"):
+            tomb.confidence = "approved"
+            store.save(tomb)
+            approved += 1
+            print("approved %s" % tomb.id)
+            if not tomb.retry_when.strip():
+                print(
+                    "warning: retry_when is empty — state the condition under "
+                    "which a retry makes sense."
+                )
+        elif answer in ("q", "quit"):
+            break
+        else:
+            skipped += 1
+    print("")
+    print(
+        "%d approved, %d skipped, %d candidate(s) remain"
+        % (approved, skipped, len(records) - approved - skipped)
+    )
     return 0
 
 
@@ -313,6 +381,11 @@ def build_parser():
 
     p = sub.add_parser("init", help="create .tombstones/ in the target repo")
     p.add_argument(
+        "--detect",
+        action="store_true",
+        help="immediately scan git history for reverts (first tombstones, free)",
+    )
+    p.add_argument(
         "--snippets",
         action="store_true",
         help="also inject the check_nogo rule into AGENTS.md (and CLAUDE.md if present)",
@@ -371,6 +444,12 @@ def build_parser():
     p = sub.add_parser("show", help="print one tombstone in full")
     p.add_argument("id", help="tombstone id")
     p.set_defaults(func=cmd_show)
+
+    p = sub.add_parser(
+        "review",
+        help="walk candidate tombstones one by one and approve/skip (human-only loop)",
+    )
+    p.set_defaults(func=cmd_review)
 
     p = sub.add_parser(
         "check", help="query tombstones by attempt text and/or files before retrying"

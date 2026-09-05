@@ -146,10 +146,11 @@ a different path. Tombstones are records of past rejections, not bans.
 
 | Command | Purpose |
 |---|---|
-| `epitaph init` | Create `.tombstones/` in the target repo (`--snippets` also injects the rule below) |
+| `epitaph init` | Create `.tombstones/` in the target repo. `--detect` immediately mines existing history for reverts; `--snippets` also injects the rule below |
 | `epitaph snippets` | Inject the recommended `check_nogo` rule into `AGENTS.md` (and `CLAUDE.md` if present) — idempotent |
 | `epitaph add --attempt T --reason R [--scope P...] [--evidence R...] [--rejected-by WHO] [--retry-when W] [--date YYYY-MM-DD] [--confidence C] [--status S]` | Record a rejection (defaults to `candidate`) |
 | `epitaph approve <id>` | Promote a tombstone to `approved` (one human line) |
+| `epitaph review` | Walk candidates one by one: approve / skip / quit (interactive, human-only; closed stdin approves nothing) |
 | `epitaph overturn <id> --reason R` | A retry succeeded — keep the refutation on record |
 | `epitaph list [--status S] [--scope P]` | List tombstones, newest first |
 | `epitaph show <id>` | Print one tombstone in full |
@@ -159,7 +160,7 @@ a different path. Tombstones are records of past rejections, not bans.
 
 Global: `--repo PATH` (default: cwd, walking up), `--version`.
 
-`check` uses deterministic normalized substring and token-overlap matching (0.5 containment for multi-token queries, exact token for single tokens) against `attempt + reason` — scope paths are full of common words and only match via `--file` — and also matches queried files against scope anchors in both directions. Every hit prints its confidence and *why* it matched; on a repo without a ledger it answers softly (`nothing recorded here yet`) instead of erroring, matching the MCP behavior agents see.
+`check` uses deterministic normalized substring and token-overlap matching (0.5 containment for multi-token queries, exact token for single tokens) against `attempt + reason` — scope paths are full of common words and only match via `--file` — and also matches queried files against scope anchors in both directions. Every hit prints its confidence and *why* it matched; on a repo without a ledger it answers softly (`nothing recorded here yet`) instead of erroring, matching the MCP behavior agents see. Reports are capped at the top 20 matches ("… and N more") on both CLI and MCP, so a broad query can't dump the whole ledger into an agent's context.
 
 ## Workflow: detect -> draft -> approve -> query
 

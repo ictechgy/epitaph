@@ -15,7 +15,7 @@ src/epitaph/
   matcher.py  deterministic matching: normalize → substring / token-overlap (+ stopwords, query side)
   detect.py   git revert scanner (incremental via .tombstones/.cursor) + DetectReport
   render.py   THE match-report renderer — shared by CLI `check` and MCP `check_nogo`
-  cli.py      argparse CLI (init/add/approve/overturn/list/show/check/detect/install-hook/snippets)
+  cli.py      argparse CLI (init/add/approve/overturn/list/show/check/detect/install-hook/snippets/review)
   mcp.py      zero-dep stdio JSON-RPC MCP server (read-only tools only)
 examples/     valid tombstone records shown in the README
 tests/        pytest; detect tests build real temp git repos via subprocess
@@ -54,7 +54,10 @@ python -m epitaph.mcp --repo /some/repo # MCP smoke (speak JSON-RPC on stdin)
   template put it after `detect` and argparse silently rejected it, disabling every hook
   (regression test: `test_installed_hook_actually_detects` executes the real hook).
 - **One renderer**: `render.format_matches()` formats match reports for both CLI and MCP.
-  Never re-implement report formatting at a call site.
+  Never re-implement report formatting at a call site. It caps output at `MATCH_LIMIT`
+  (top matches + "and N more") — epitaph sells token economy; don't uncap without cause.
+  `epitaph review` is the human-only approval loop: on closed stdin it approves NOTHING
+  (an agent piping input must never self-approve).
 
 ## Testing gotchas
 

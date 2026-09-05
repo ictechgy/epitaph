@@ -52,8 +52,16 @@ Read `AGENTS.md` first (invariants + gotchas), `기획서.md` for the original v
 - [ ] `.cursor` merge-conflict markers self-heal today (garbage sha → full scan); consider a
       friendlier warning when the fallback triggers (`detect` could print "cursor unusable,
       rescanned full history").
-- [ ] `detect` drafts `rejected_by: human-review` blindly — consider surfacing an explicit
-      "correct me" marker in `list` output for candidates.
+- [x] Candidate surfacing — DONE 2026-09-06: `epitaph review` walks candidates
+      interactively (approve/skip/quit); EOF approves nothing. `init --detect` +
+      review-first hints close the cold-start loop.
+
+## 4.5 UX/perf quick wins — DONE 2026-09-06 (pre-v0.2)
+
+- [x] Cold start: `init` recommends `detect` first (free tombstones from history);
+      `init --detect` runs it immediately.
+- [x] Match reports capped at top 20 + "… and N more" (CLI + MCP, one renderer).
+- [x] `epitaph review` human approval loop (see above).
 
 ## Context pointers
 
