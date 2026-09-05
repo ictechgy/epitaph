@@ -151,7 +151,7 @@ def detect(repo, store=None, full=False) -> DetectReport:
                 rejected_by="human-review",
                 reason=(
                     "Auto-detected from revert commit %s (%s). Candidate pending "
-                    "human review: edit the reason and run `tombstone approve %s`."
+                    "human review: edit the reason and run `epitaph approve %s`."
                     % (sha[:10], subject, tomb_id)
                 ),
                 evidence=evidence,

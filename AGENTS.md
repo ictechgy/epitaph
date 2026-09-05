@@ -2,7 +2,7 @@
 
 A repo-scoped ledger of rejected agent attempts. One JSON file per tombstone in
 `.tombstones/` inside the *user's* repo (not this one). Agents query it via MCP
-(`check_nogo`) or CLI (`tombstone check`) **before** retrying an approach; humans approve
+(`check_nogo`) or CLI (`epitaph check`) **before** retrying an approach; humans approve
 candidates with one line. See README.md for the full story and differentiation vs
 deadends.dev / Mem0 / ADRs.
 
@@ -49,7 +49,7 @@ python -m tombstone.mcp --repo /some/repo # MCP smoke (speak JSON-RPC on stdin)
   `.tombstones/` silently on a storeless repo); fall back to a full scan when the cursor
   is missing or stale (history rewrite). `--full` bypasses the cursor. Dates come from
   `%cd` (committer), not `%ad`.
-- **Hook argument order**: the installed hook runs `tombstone --repo "$(...)" detect`.
+- **Hook argument order**: the installed hook runs `epitaph --repo "$(...)" detect`.
   `--repo` is a top-level argparse option and MUST precede the subcommand — the previous
   template put it after `detect` and argparse silently rejected it, disabling every hook
   (regression test: `test_installed_hook_actually_detects` executes the real hook).
@@ -70,6 +70,7 @@ python -m tombstone.mcp --repo /some/repo # MCP smoke (speak JSON-RPC on stdin)
 - `matcher.py` semantics → README "check" paragraph + `tests/test_matcher.py`.
 - Record schema → README record-schema block + `examples/` + `tests/test_schema.py`.
 - `render.py` wording → `tests/test_mcp.py` and `tests/test_cli.py` assertions.
-- Naming: `tombstone` is a working title; the PyPI release name is expected to be
-  `epitaph` (Android crash dumps / Cassandra collision). Don't bake name-dependent
-  strings outside pyproject/README without checking.
+- Naming (decided 2026-09-05): PyPI/repo/console-script name is **`epitaph`**; the
+  import module stays `tombstone`, records stay "tombstones" in `.tombstones/`.
+  User-facing command strings say `epitaph <subcommand>`. The hook invokes bare
+  `epitaph` — keep the regression test green after touching it.

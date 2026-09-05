@@ -1,4 +1,4 @@
-"""Command line interface: `tombstone <command>`."""
+"""Command line interface: `epitaph <command>`."""
 from __future__ import annotations
 
 import argparse
@@ -91,7 +91,7 @@ def _resolve_store(args, create=False):
     elif not store.exists():
         raise CliError(
             "no .tombstones/ directory found (looked from %s upward) — run "
-            "`tombstone init` first" % Path(getattr(args, "repo", None) or ".").resolve()
+            "`epitaph init` first" % Path(getattr(args, "repo", None) or ".").resolve()
         )
     return store
 
@@ -107,12 +107,12 @@ def cmd_init(args):
     store = _resolve_store(args, create=True)
     print("initialized %s" % store.dir)
     print(
-        'next: tombstone add --attempt "..." --reason "..." --scope src/foo.py '
+        'next: epitaph add --attempt "..." --reason "..." --scope src/foo.py '
         '[--retry-when "..."]'
     )
     if getattr(args, "snippets", False):
         return cmd_snippets(args)
-    print("also consider: tombstone snippets (inject the check_nogo rule into AGENTS.md)")
+    print("also consider: epitaph snippets (inject the check_nogo rule into AGENTS.md)")
     return 0
 
 
@@ -137,7 +137,7 @@ def cmd_add(args):
             "under which a retry makes sense."
         )
     if tomb.confidence == "candidate":
-        print("note: candidate until approved: tombstone approve %s" % tomb.id)
+        print("note: candidate until approved: epitaph approve %s" % tomb.id)
     return 0
 
 
@@ -228,13 +228,13 @@ def cmd_check(args):
     files = list(args.file or [])
     query = " ".join(args.query) if args.query else None
     if not query and not files:
-        raise CliError("provide search text and/or --file (see `tombstone check --help`)")
+        raise CliError("provide search text and/or --file (see `epitaph check --help`)")
     # A storeless repo gets the same soft answer agents see over MCP —
     # "nothing is known" is the truthful answer, not an error.
     store = TombstoneStore.find(args.repo or ".")
     if store is None:
         print("no tombstones recorded here yet — nothing is known against this attempt.")
-        print("start a ledger with `tombstone init` (records land in .tombstones/).")
+        print("start a ledger with `epitaph init` (records land in .tombstones/).")
         return 0
     matches = match_tombstones(query=query, files=files, tombstones=store.all())
     print(format_matches(matches))
@@ -273,10 +273,10 @@ def cmd_install_hook(args):
     block = (
         MARKER_BEGIN
         + "\n"
-        + "# Installed by `tombstone install-hook`. Scans for reverts after each\n"
+        + "# Installed by `epitaph install-hook`. Scans for reverts after each\n"
         + "# commit; must never fail the commit.\n"
         + "# --repo goes BEFORE the subcommand (top-level argparse option).\n"
-        + 'tombstone --repo "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" '
+        + 'epitaph --repo "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" '
         + "detect >/dev/null 2>&1 || true\n"
         + MARKER_END
         + "\n"
@@ -296,14 +296,14 @@ def cmd_install_hook(args):
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        prog="tombstone",
+        prog="epitaph",
         description=(
             "A repo-scoped ledger of rejected agent attempts. Tombstones are "
             "testimony, not verdicts: they record what was tried and why it "
             "was rejected, so the next agent doesn't walk the same dead end."
         ),
     )
-    parser.add_argument("--version", action="version", version="tombstone " + __version__)
+    parser.add_argument("--version", action="version", version="epitaph " + __version__)
     parser.add_argument(
         "--repo",
         default=None,

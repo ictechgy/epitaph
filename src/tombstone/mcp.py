@@ -22,7 +22,7 @@ from .render import format_matches
 from .store import TombstoneStore
 
 PROTOCOL_VERSION = "2024-11-05"
-SERVER_NAME = "tombstone"
+SERVER_NAME = "epitaph"
 
 JSONRPC_PARSE_ERROR = -32700
 JSONRPC_INVALID_REQUEST = -32600
@@ -186,7 +186,7 @@ class Server:
         if not records:
             return (
                 "no tombstones recorded in %s yet — nothing known against this "
-                "attempt. Record rejections with `tombstone add`." % self.store.dir
+                "attempt. Record rejections with `epitaph add`." % self.store.dir
             )
         return format_matches(
             match_tombstones(query=attempt or None, files=files or [], tombstones=records)

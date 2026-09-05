@@ -48,7 +48,7 @@ def test_initialize_handshake(server):
     assert resp["id"] == 1
     assert resp["result"]["protocolVersion"] == "2025-06-18"
     assert "tools" in resp["result"]["capabilities"]
-    assert resp["result"]["serverInfo"]["name"] == "tombstone"
+    assert resp["result"]["serverInfo"]["name"] == "epitaph"
 
 
 def test_initialize_defaults_protocol_version(server):
@@ -249,7 +249,7 @@ def test_main_stdio_roundtrip(tmp_path, monkeypatch, capsys):
     # the notification produced no output
     assert len(responses) == 3
     assert responses[0]["id"] == 0
-    assert responses[0]["result"]["serverInfo"]["name"] == "tombstone"
+    assert responses[0]["result"]["serverInfo"]["name"] == "epitaph"
     assert responses[1]["id"] == 1
     assert [t["name"] for t in responses[1]["result"]["tools"]] == [
         "check_nogo",

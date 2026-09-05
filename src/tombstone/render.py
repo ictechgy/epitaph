@@ -1,6 +1,6 @@
 """Shared match-report rendering.
 
-The CLI (`tombstone check`) and the MCP server (`check_nogo`) must show
+The CLI (`epitaph check`) and the MCP server (`check_nogo`) must show
 agents and humans the same format; both go through this module.
 """
 from __future__ import annotations
@@ -12,7 +12,7 @@ _DISCLAIMER = (
 
 NO_MATCH = (
     "no matching tombstones — nothing recorded against this attempt. "
-    "Proceed, and consider `tombstone add` if it gets rejected."
+    "Proceed, and consider `epitaph add` if it gets rejected."
 )
 
 

@@ -3,14 +3,14 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tombstone"
+name = "epitaph"
 dynamic = ["version"]
 description = "A repo-scoped ledger of rejected agent attempts: structured tombstones for rolled-back patches, consulted before the next agent retries the same path."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-authors = [{ name = "tombstone contributors" }]
+authors = [{ name = "epitaph contributors" }]
 keywords = ["agent", "ai", "memory", "negative-memory", "git", "mcp", "cli", "revert"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -28,7 +28,7 @@ classifiers = [
 dependencies = []
 
 [project.scripts]
-tombstone = "tombstone.cli:main"
+epitaph = "tombstone.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

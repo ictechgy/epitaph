@@ -7,15 +7,14 @@ Read `AGENTS.md` first (invariants + gotchas), `기획서.md` for the original v
 
 - [ ] **Ship it**: create the GitHub repo, push, confirm the Actions CI workflow goes green
       (`.github/workflows/ci.yml` exists but has never run).
-- [ ] **Name decision before PyPI**: working name `tombstone` collides with Android crash
-      dumps / Cassandra tombstones. Leading candidate: **`epitaph`** (search-clean, matches
-      the reason-centric design). If renaming: package/repo/console-script/README/AGENTS.md
-      in one sweep + `git mv`-style commit. Check GitHub + PyPI availability first.
+- [x] **Name decision** — DONE 2026-09-05: dist/repo/console-script name is **`epitaph`**
+      (PyPI + GitHub verified clear). Import module stays `tombstone`; records stay
+      "tombstones" in `.tombstones/`; user-facing strings say `epitaph <subcommand>`.
 - [ ] Publish to PyPI (after name), then flip README install line from "from a checkout" to real install commands (`uvx`/`pipx`).
 
 ## 2. v0.2 — the feature line (from 기획서, in order)
 
-- [x] **AGENTS.md snippet generator** — DONE: `tombstone snippets` (and `init --snippets`).
+- [x] **AGENTS.md snippet generator** — DONE: `epitaph snippets` (and `init --snippets`).
       Creates `AGENTS.md` if absent, appends the check_nogo rule idempotently, touches
       `CLAUDE.md` only when it already exists (never forks the source of truth).
 - [ ] **Session give-up detection**: parse agent transcripts for "I'll try a different

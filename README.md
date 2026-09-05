@@ -1,8 +1,8 @@
-# tombstone
+# epitaph
 
 > Every agent memory accumulates successes and preferences. **tombstone** accumulates refusals: it records rejected patches, rolled-back approaches, and abandoned paths as structured tombstones inside your repo — so the next agent checks before walking the same dead end. *"This approach was buried here, in this module, on August 12."*
 
-**Status:** v0.1 (deterministic core). The final name is still pending — `epitaph` is the leading candidate (the working name `tombstone` collides with Android native crash dumps and Cassandra tombstones in search). The Python package name stays `tombstone` until the rename lands.
+**Status:** v0.1 (deterministic core). Distribution name is **`epitaph`** (decided 2026-09-05; the working name `tombstone` collided with Android crash dumps / Cassandra). The import module is still `tombstone`, records are still "tombstones" living in `.tombstones/` — only the PyPI/repo/console-script name changed.
 
 ## The problem: failure knowledge evaporates three times
 
@@ -22,17 +22,17 @@ pip install .
 
 cd path/to/your/repo
 
-tombstone init
-tombstone add \
+epitaph init
+epitaph add \
   --attempt "Redis-based distributed lock to serialize session writes" \
   --reason "Race window was not closed; retry storm under load" \
   --scope src/session/lock.py src/session/manager.py \
   --evidence "PR #412" "revert 9f2e1a" \
   --retry-when "once a fencing token sits in front of the lock"
 
-tombstone list
-tombstone check "redis lock for sessions"   # what an agent runs BEFORE retrying
-tombstone approve ts-20260812-a3f2          # one human line: candidate -> approved
+epitaph list
+epitaph check "redis lock for sessions"   # what an agent runs BEFORE retrying
+epitaph approve ts-20260812-a3f2          # one human line: candidate -> approved
 ```
 
 ### Automatic detection
@@ -40,7 +40,7 @@ tombstone approve ts-20260812-a3f2          # one human line: candidate -> appro
 `detect` scans `git log` for revert commits (subject starting with `Revert "` and/or a body containing `This reverts commit <sha>`) and drafts **candidate**-confidence tombstones linking the evidence:
 
 ```bash
-tombstone detect
+epitaph detect
 # created ts-20260902-1b7e (candidate)
 # 1 revert commit(s) scanned, 1 created, 0 already recorded
 ```
@@ -48,7 +48,7 @@ tombstone detect
 Or install a post-commit hook that runs detect automatically (it can never fail your commit):
 
 ```bash
-tombstone install-hook
+epitaph install-hook
 ```
 
 `detect` is incremental and idempotent: it remembers the last scanned commit in `.tombstones/.cursor` (so the post-commit hook only pays for new history), and the tombstone id is derived from the revert sha, so even a forced full rescan (`tombstone detect --full`) never duplicates. If a history rewrite strands the cursor, detect falls back to a full scan automatically.
@@ -98,7 +98,7 @@ Claude Code config (`.mcp.json` in the project root, or `~/.claude.json`):
 ```json
 {
   "mcpServers": {
-    "tombstone": {
+    "epitaph": {
       "command": "python3",
       "args": ["-m", "tombstone.mcp"],
       "env": { "TOMBSTONE_REPO": "/absolute/path/to/your/repo" }
@@ -107,14 +107,14 @@ Claude Code config (`.mcp.json` in the project root, or `~/.claude.json`):
 }
 ```
 
-Or with the CLI: `claude mcp add tombstone -- python3 -m tombstone.mcp` (run from the repo root; the server resolves the repo from its working directory if `TOMBSTONE_REPO` is unset).
+Or with the CLI: `claude mcp add epitaph -- python3 -m tombstone.mcp` (run from the repo root; the server resolves the repo from its working directory if `TOMBSTONE_REPO` is unset).
 
 The server is a plain stdio JSON-RPC process — any MCP-capable client works. Cursor (`.cursor/mcp.json`):
 
 ```json
 {
   "mcpServers": {
-    "tombstone": {
+    "epitaph": {
       "command": "python3",
       "args": ["-m", "tombstone.mcp"],
       "env": { "TOMBSTONE_REPO": "/absolute/path/to/your/repo" }
@@ -126,7 +126,7 @@ The server is a plain stdio JSON-RPC process — any MCP-capable client works. C
 Codex (`~/.codex/config.toml`):
 
 ```toml
-[mcp_servers.tombstone]
+[mcp_servers.epitaph]
 command = "python3"
 args = ["-m", "tombstone.mcp"]
 env = { TOMBSTONE_REPO = "/absolute/path/to/your/repo" }
