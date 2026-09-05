@@ -77,6 +77,18 @@ Read `AGENTS.md` first (invariants + gotchas), `기획서.md` for the original v
       (revert commits resolve their target; explicit flags win).
 - [x] `epitaph review` human approval loop (see above).
 
+## 5. Pre-seed presets — pipeline DONE 2026-09-06, first curation pending
+
+- [x] `epitaph export` (approved-only default, `--all` for candidates) and
+      `epitaph import` (idempotent by id, `origin` provenance key) shipped.
+- [x] `presets/` layout + curation policy (presets ship APPROVED records only;
+      candidates/ is raw detect output, clearly labeled).
+- [x] First mining run: facebook/react blobless clone → 194 revert candidates
+      (2013–2026) exported to `presets/candidates/react.json`.
+- [ ] NEXT (human step): review the react candidates in a scratch clone and
+      export the endorsed subset as `presets/react.json` — the first real
+      preset. Recipe in presets/README.md.
+
 ## Context pointers
 
 - Differentiation must stay visible in README (deadends.dev = global error-signature layer,

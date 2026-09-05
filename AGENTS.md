@@ -22,6 +22,8 @@ src/epitaph/
   cli.py      argparse CLI (init/add/approve/overturn/list/show/check/detect/install-hook/snippets/review)
   mcp.py      zero-dep stdio JSON-RPC MCP server (read-only tools only)
 examples/     valid tombstone records shown in the README
+presets/      curated pre-seed bundles (approved only) + candidates/ raw detect
+              output; see presets/README.md — presets NEVER ship candidates
 tests/        pytest; detect tests build real temp git repos via subprocess
 ```
 

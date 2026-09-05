@@ -158,6 +158,8 @@ a different path. Tombstones are records of past rejections, not bans.
 | `epitaph detect [--full]` | Scan git history for reverts, draft candidate tombstones (incremental via `.cursor`) |
 | `epitaph giveup [--limit N]` | Scan agent session transcripts (Claude Code, Codex — discovered by format) for give-up transitions ("I'll try a different approach"), draft `rejected_by: agent-gaveup` candidates |
 | `epitaph stale [--apply]` | Audit active tombstones whose scope anchors are all gone from the repo (path missing / symbol not found) — report by default, `--apply` flips to `status: stale` |
+| `epitaph export [-o FILE] [--all]` | Write the ledger as a portable `epitaph-preset/v1` bundle — approved records by default (candidates with `--all`) |
+| `epitaph import FILE [--origin LABEL]` | Merge a preset bundle into the ledger — idempotent by id, stamps provenance (`origin`) on imported records |
 | `epitaph install-hook` | Install a post-commit hook that runs detect |
 
 Global: `--repo PATH` (default: cwd, walking up), `--version`.
@@ -172,6 +174,16 @@ Global: `--repo PATH` (default: cwd, walking up), `--version`.
 | Draft | optional LLM (v0.2) | v0.1 works fully without drafting |
 | Approve | one human line | `epitaph approve ts-...`. **An agent may never judge on its own** — a tombstone is testimony, not a verdict |
 | Query | MCP tools + CLI | `check_nogo` / `recent_tombstones` / `epitaph check` |
+
+## Presets — pre-seeded ledgers
+
+A new repo starts cold. Presets fix that: detect mines a well-known project's
+revert history, a human approves the subset they endorse, and the approved
+bundle ships in [`presets/`](presets/) for anyone to `epitaph import`
+(idempotent, provenance-stamped). Raw, unreviewed detect output lives under
+`presets/candidates/` and is clearly labeled — presets ship approved records
+only. See [`presets/README.md`](presets/README.md) for the curation policy
+and the produce-a-preset recipe (blobless clones are enough).
 
 ## Principles
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -442,6 +443,81 @@ def cmd_giveup(args):
     return 0
 
 
+BUNDLE_FORMAT = "epitaph-preset/v1"
+
+
+def cmd_export(args):
+    """Write the ledger (approved records by default) as a portable bundle."""
+    store = _resolve_store(args, create=False)
+    records = [t for t in store.all() if args.all or t.confidence == "approved"]
+    if not records:
+        print(
+            "no %s tombstones to export — approve records first (`epitaph review`)"
+            % ("matching" if not args.all else "")
+        )
+        return 0
+    bundle = {
+        "format": BUNDLE_FORMAT,
+        "source": str(store.root),
+        "generated": dt.date.today().isoformat(),
+        "records": [t.to_dict() for t in records],
+    }
+    payload = json.dumps(bundle, ensure_ascii=False, indent=2) + "\n"
+    if args.output:
+        Path(args.output).write_text(payload, encoding="utf-8")
+        print("exported %d tombstone(s) -> %s" % (len(records), args.output))
+    else:
+        print(payload, end="")
+    return 0
+
+
+def cmd_import(args):
+    """Merge a preset bundle into this repo's ledger (idempotent by id)."""
+    store = _resolve_store(args, create=True)
+    try:
+        raw = json.loads(Path(args.file).read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise CliError("cannot read %s: %s" % (args.file, exc))
+    except json.JSONDecodeError as exc:
+        raise CliError("invalid JSON in %s: %s" % (args.file, exc))
+    if isinstance(raw, dict) and isinstance(raw.get("records"), list):
+        source = raw.get("source") or Path(args.file).name
+        entries = raw["records"]
+    elif isinstance(raw, list):
+        source = args.origin or Path(args.file).name
+        entries = raw
+    else:
+        raise CliError(
+            "%s is not a %s bundle (expected object with `records` or a bare list)"
+            % (args.file, BUNDLE_FORMAT)
+        )
+    created, skipped = [], []
+    for entry in entries:
+        try:
+            tomb = Tombstone.from_dict(entry)
+        except SchemaError as exc:
+            raise CliError("invalid record in %s: %s" % (args.file, exc))
+        if store.has(tomb.id):
+            skipped.append(tomb.id)
+            continue
+        if args.origin:
+            tomb.extra.setdefault("origin", args.origin)
+        elif "origin" not in tomb.extra and source:
+            tomb.extra.setdefault("origin", source)
+        store.add(tomb)
+        created.append(tomb.id)
+    print(
+        "%d record(s) in %s, %d imported, %d already present (matched by id)"
+        % (len(entries), Path(args.file).name, len(created), len(skipped))
+    )
+    candidates = sum(
+        1 for tid in created if store.get(tid) and store.get(tid).confidence == "candidate"
+    )
+    if candidates:
+        print("%d imported as candidates — epitaph review to decide" % candidates)
+    return 0
+
+
 def cmd_install_hook(args):
     repo = Path(args.repo or ".").resolve()
     proc = subprocess.run(
@@ -616,6 +692,25 @@ def build_parser():
         help="actually flip matched tombstones to status: stale (human decision, like approve)",
     )
     p.set_defaults(func=cmd_stale)
+
+    p = sub.add_parser(
+        "export",
+        help="write the ledger as a portable bundle (approved records by default)",
+    )
+    p.add_argument("-o", "--output", metavar="FILE", default=None,
+                   help="write to FILE instead of stdout")
+    p.add_argument("--all", action="store_true",
+                   help="include candidates too (presets ship approved records only)")
+    p.set_defaults(func=cmd_export)
+
+    p = sub.add_parser(
+        "import",
+        help="merge a preset bundle into this repo's ledger (idempotent by id)",
+    )
+    p.add_argument("file", help="bundle path (epitaph-preset/v1 JSON or a bare record list)")
+    p.add_argument("--origin", metavar="LABEL", default=None,
+                   help="provenance label stored on imported records (default: file name / bundle source)")
+    p.set_defaults(func=cmd_import)
 
     p = sub.add_parser(
         "install-hook", help="install a post-commit hook that runs detect (never fails a commit)"
