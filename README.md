@@ -32,7 +32,7 @@ tombstone add \
 
 tombstone list
 tombstone check "redis lock for sessions"   # what an agent runs BEFORE retrying
-tombstone approve ts-20260812-a3f          # one human line: candidate -> approved
+tombstone approve ts-20260812-a3f2          # one human line: candidate -> approved
 ```
 
 ### Automatic detection
@@ -57,7 +57,7 @@ tombstone install-hook
 
 ```json
 {
-  "id": "ts-20260812-a3f",
+  "id": "ts-20260812-a3f2",
   "attempt": "Redis-based distributed lock to serialize session writes",
   "scope": ["src/session/lock.py", "src/session/manager.py"],
   "rejected_at": "2026-08-12",
