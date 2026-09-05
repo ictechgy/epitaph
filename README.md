@@ -109,6 +109,31 @@ Claude Code config (`.mcp.json` in the project root, or `~/.claude.json`):
 
 Or with the CLI: `claude mcp add tombstone -- python3 -m tombstone.mcp` (run from the repo root; the server resolves the repo from its working directory if `TOMBSTONE_REPO` is unset).
 
+The server is a plain stdio JSON-RPC process — any MCP-capable client works. Cursor (`.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "tombstone": {
+      "command": "python3",
+      "args": ["-m", "tombstone.mcp"],
+      "env": { "TOMBSTONE_REPO": "/absolute/path/to/your/repo" }
+    }
+  }
+}
+```
+
+Codex (`~/.codex/config.toml`):
+
+```toml
+[mcp_servers.tombstone]
+command = "python3"
+args = ["-m", "tombstone.mcp"]
+env = { TOMBSTONE_REPO = "/absolute/path/to/your/repo" }
+```
+
+Clients without MCP support can use the CLI instead — `tombstone check "..." --file path` produces the same match report through the same renderer.
+
 Recommended one-line rule for `AGENTS.md` / `CLAUDE.md`:
 
 ```markdown

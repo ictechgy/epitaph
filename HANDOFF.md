@@ -17,8 +17,15 @@ Read `AGENTS.md` first (invariants + gotchas), `기획서.md` for the original v
 
 - [ ] **Session give-up detection**: parse agent transcripts for "I'll try a different
       approach" transitions and draft `rejected_by: agent-gaveup` candidates.
-      Reuse the transcript adapter from the sibling project `../yield-audit`
-      (`src/yield_audit/transcripts.py`) rather than writing a new parser.
+      Start from the transcript adapter in the sibling project `../yield-audit`
+      (`src/yield_audit/transcripts.py`) — but note it is **Claude Code-only**
+      (reads `~/.claude/projects/<munged-cwd>/*.jsonl`). Vendor decision: tombstone
+      itself must stay vendor-agnostic — define a small adapter interface
+      (e.g. `iter_transcripts(repo) -> TranscriptEvents`, detected by format, not
+      by vendor name), ship the Claude Code adapter first, and leave adapters for
+      other vendors (Codex session logs, Cursor history) as drop-ins. README's
+      MCP section already documents Cursor/Codex config; keep give-up detection
+      documented the same way ("Claude Code today, adapter interface for the rest").
 - [ ] **LLM drafter (optional flag)**: propose attempt/reason drafts for manual `add` and
       revert candidates. Must stay optional — v0.1 is fully functional without it.
 - [ ] **AGENTS.md snippet generator**: `tombstone init --snippets` (or similar) that
