@@ -30,6 +30,48 @@ class CliError(RuntimeError):
 MARKER_BEGIN = "# >>> tombstone >>>"
 MARKER_END = "# <<< tombstone <<<"
 
+SNIPPET_BEGIN = "<!-- >>> tombstone rule >>> -->"
+SNIPPET_END = "<!-- <<< tombstone rule <<< -->"
+
+SNIPPET = """<!-- >>> tombstone rule >>> -->
+Before implementing an approach, call check_nogo with your planned approach and target
+files. On a match, read `reason` and `retry_when`: either address `retry_when` or pick
+a different path. Tombstones are records of past rejections, not bans.
+<!-- <<< tombstone rule <<< -->"""
+
+
+def _append_snippet(path: Path) -> bool:
+    """Append the tombstone rule to an agent-instructions file. False if already there."""
+    if path.exists():
+        content = path.read_text(encoding="utf-8")
+        if SNIPPET_BEGIN in content:
+            return False
+        path.write_text(content.rstrip("\n") + "\n\n" + SNIPPET + "\n", encoding="utf-8")
+    else:
+        path.write_text(SNIPPET + "\n", encoding="utf-8")
+    return True
+
+
+def cmd_snippets(args):
+    repo = Path(args.repo or ".").resolve()
+    # AGENTS.md is the cross-vendor convention — create it if absent.
+    agents = repo / "AGENTS.md"
+    existed = agents.exists()
+    if _append_snippet(agents):
+        print("%s AGENTS.md" % ("updated" if existed else "created"))
+    else:
+        print("AGENTS.md already has the tombstone rule")
+    # CLAUDE.md is appended only when it already exists, so we never fork the
+    # source of truth for repos that rely solely on AGENTS.md.
+    claude = repo / "CLAUDE.md"
+    if claude.exists():
+        if _append_snippet(claude):
+            print("updated CLAUDE.md")
+        else:
+            print("CLAUDE.md already has the tombstone rule")
+    print("next: commit the change so every agent working in this repo sees the rule")
+    return 0
+
 
 def _split_list(values):
     """Flatten `nargs="+"` lists, also splitting comma-separated items."""
@@ -68,6 +110,9 @@ def cmd_init(args):
         'next: tombstone add --attempt "..." --reason "..." --scope src/foo.py '
         '[--retry-when "..."]'
     )
+    if getattr(args, "snippets", False):
+        return cmd_snippets(args)
+    print("also consider: tombstone snippets (inject the check_nogo rule into AGENTS.md)")
     return 0
 
 
@@ -267,7 +312,18 @@ def build_parser():
     sub = parser.add_subparsers(dest="command", metavar="command", required=True)
 
     p = sub.add_parser("init", help="create .tombstones/ in the target repo")
+    p.add_argument(
+        "--snippets",
+        action="store_true",
+        help="also inject the check_nogo rule into AGENTS.md (and CLAUDE.md if present)",
+    )
     p.set_defaults(func=cmd_init)
+
+    p = sub.add_parser(
+        "snippets",
+        help="inject the recommended check_nogo rule into AGENTS.md (and CLAUDE.md if present)",
+    )
+    p.set_defaults(func=cmd_snippets)
 
     p = sub.add_parser("add", help="record a rejected attempt (defaults to candidate)")
     p.add_argument("--attempt", required=True, help="what was tried")

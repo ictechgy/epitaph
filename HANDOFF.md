@@ -15,6 +15,9 @@ Read `AGENTS.md` first (invariants + gotchas), `기획서.md` for the original v
 
 ## 2. v0.2 — the feature line (from 기획서, in order)
 
+- [x] **AGENTS.md snippet generator** — DONE: `tombstone snippets` (and `init --snippets`).
+      Creates `AGENTS.md` if absent, appends the check_nogo rule idempotently, touches
+      `CLAUDE.md` only when it already exists (never forks the source of truth).
 - [ ] **Session give-up detection**: parse agent transcripts for "I'll try a different
       approach" transitions and draft `rejected_by: agent-gaveup` candidates.
       Start from the transcript adapter in the sibling project `../yield-audit`
@@ -28,9 +31,8 @@ Read `AGENTS.md` first (invariants + gotchas), `기획서.md` for the original v
       documented the same way ("Claude Code today, adapter interface for the rest").
 - [ ] **LLM drafter (optional flag)**: propose attempt/reason drafts for manual `add` and
       revert candidates. Must stay optional — v0.1 is fully functional without it.
-- [ ] **AGENTS.md snippet generator**: `tombstone init --snippets` (or similar) that
-      appends the recommended `check_nogo` rule (README "Recommended one-line rule")
-      to the user's AGENTS.md/CLAUDE.md.
+      Priority note: convenience only — the stale audit (§3) is the real moat;
+      if time is tight, build that first.
 - [ ] **check_nogo refinement**: optional embedding similarity behind the lexical matcher
       (opt-in, local model). Keep lexical as default; deterministic-first principle.
 
@@ -56,3 +58,5 @@ Read `AGENTS.md` first (invariants + gotchas), `기획서.md` for the original v
   we = repo-scoped attempt ledger; complementary, not competing).
 - yield-audit (`../yield-audit`) M9 is the measurement that proves this tool's value —
   consider a joint demo ("M9 measured X tokens of repeat tax; tombstone removed the top item").
+  Status check 2026-09-05: M9 is still an *unimplemented roadmap item* in yield-audit
+  (v0.2 there) — the joint demo is blocked until that lands.

@@ -134,7 +134,7 @@ env = { TOMBSTONE_REPO = "/absolute/path/to/your/repo" }
 
 Clients without MCP support can use the CLI instead — `tombstone check "..." --file path` produces the same match report through the same renderer.
 
-Recommended one-line rule for `AGENTS.md` / `CLAUDE.md`:
+Recommended one-line rule for `AGENTS.md` / `CLAUDE.md` — inject it with `tombstone snippets` (creates `AGENTS.md` if absent, appends to `CLAUDE.md` only when it already exists, idempotent):
 
 ```markdown
 Before implementing an approach, call check_nogo with your planned approach and target
@@ -146,7 +146,8 @@ a different path. Tombstones are records of past rejections, not bans.
 
 | Command | Purpose |
 |---|---|
-| `tombstone init` | Create `.tombstones/` in the target repo |
+| `tombstone init` | Create `.tombstones/` in the target repo (`--snippets` also injects the rule below) |
+| `tombstone snippets` | Inject the recommended `check_nogo` rule into `AGENTS.md` (and `CLAUDE.md` if present) — idempotent |
 | `tombstone add --attempt T --reason R [--scope P...] [--evidence R...] [--rejected-by WHO] [--retry-when W] [--date YYYY-MM-DD] [--confidence C] [--status S]` | Record a rejection (defaults to `candidate`) |
 | `tombstone approve <id>` | Promote a tombstone to `approved` (one human line) |
 | `tombstone overturn <id> --reason R` | A retry succeeded — keep the refutation on record |
