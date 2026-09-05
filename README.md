@@ -1,8 +1,8 @@
 # epitaph
 
-> Every agent memory accumulates successes and preferences. **tombstone** accumulates refusals: it records rejected patches, rolled-back approaches, and abandoned paths as structured tombstones inside your repo — so the next agent checks before walking the same dead end. *"This approach was buried here, in this module, on August 12."*
+> Every agent memory accumulates successes and preferences. **epitaph** accumulates refusals: it records rejected patches, rolled-back approaches, and abandoned paths as structured tombstones inside your repo — so the next agent checks before walking the same dead end. *"This approach was buried here, in this module, on August 12."*
 
-**Status:** v0.1 (deterministic core). Distribution name is **`epitaph`** (decided 2026-09-05; the working name `tombstone` collided with Android crash dumps / Cassandra). Import module and CLI are `epitaph` too; records are still "tombstones" living in `.tombstones/`.
+**Status:** v0.1 (deterministic core) — on PyPI as [`epitaph`](https://pypi.org/project/epitaph/). Records are "tombstones" living in `.tombstones/`, which is where the tool's working name came from.
 
 ## The problem: failure knowledge evaporates three times
 
@@ -12,13 +12,13 @@
 
 The result is the worst item on any inter-session yield audit: **re-discovering the same failure**. Human teams solved this with brains and folklore ("we tried that in August, it went badly"). In the agent era, that brain is not stored anywhere.
 
-tombstone is the **repo-scoped attempt ledger**: one JSON file per rejected attempt, committed to the repo, queryable by machine before the retry happens.
+epitaph is the **repo-scoped attempt ledger**: one JSON file per rejected attempt, committed to the repo, queryable by machine before the retry happens.
 
 ## Quickstart
 
 ```bash
-# install (from a checkout; PyPI release planned)
-pip install .
+# install (published on PyPI)
+pipx install epitaph    # or: pip install epitaph / uv tool install epitaph
 
 cd path/to/your/repo
 
@@ -51,7 +51,7 @@ Or install a post-commit hook that runs detect automatically (it can never fail 
 epitaph install-hook
 ```
 
-`detect` is incremental and idempotent: it remembers the last scanned commit in `.tombstones/.cursor` (so the post-commit hook only pays for new history), and the tombstone id is derived from the revert sha, so even a forced full rescan (`tombstone detect --full`) never duplicates. If a history rewrite strands the cursor, detect falls back to a full scan automatically.
+`detect` is incremental and idempotent: it remembers the last scanned commit in `.tombstones/.cursor` (so the post-commit hook only pays for new history), and the tombstone id is derived from the revert sha, so even a forced full rescan (`epitaph detect --full`) never duplicates. If a history rewrite strands the cursor, detect falls back to a full scan automatically.
 
 ### Record schema (one JSON file per tombstone in `.tombstones/`)
 
@@ -132,9 +132,9 @@ args = ["-m", "epitaph.mcp"]
 env = { EPITAPH_REPO = "/absolute/path/to/your/repo" }
 ```
 
-Clients without MCP support can use the CLI instead — `tombstone check "..." --file path` produces the same match report through the same renderer.
+Clients without MCP support can use the CLI instead — `epitaph check "..." --file path` produces the same match report through the same renderer.
 
-Recommended one-line rule for `AGENTS.md` / `CLAUDE.md` — inject it with `tombstone snippets` (creates `AGENTS.md` if absent, appends to `CLAUDE.md` only when it already exists, idempotent):
+Recommended one-line rule for `AGENTS.md` / `CLAUDE.md` — inject it with `epitaph snippets` (creates `AGENTS.md` if absent, appends to `CLAUDE.md` only when it already exists, idempotent):
 
 ```markdown
 Before implementing an approach, call check_nogo with your planned approach and target
@@ -146,16 +146,16 @@ a different path. Tombstones are records of past rejections, not bans.
 
 | Command | Purpose |
 |---|---|
-| `tombstone init` | Create `.tombstones/` in the target repo (`--snippets` also injects the rule below) |
-| `tombstone snippets` | Inject the recommended `check_nogo` rule into `AGENTS.md` (and `CLAUDE.md` if present) — idempotent |
-| `tombstone add --attempt T --reason R [--scope P...] [--evidence R...] [--rejected-by WHO] [--retry-when W] [--date YYYY-MM-DD] [--confidence C] [--status S]` | Record a rejection (defaults to `candidate`) |
-| `tombstone approve <id>` | Promote a tombstone to `approved` (one human line) |
-| `tombstone overturn <id> --reason R` | A retry succeeded — keep the refutation on record |
-| `tombstone list [--status S] [--scope P]` | List tombstones, newest first |
-| `tombstone show <id>` | Print one tombstone in full |
-| `tombstone check [TEXT] [--file P]...` | Query by attempt text and/or files before retrying |
-| `tombstone detect [--full]` | Scan git history for reverts, draft candidate tombstones (incremental via `.cursor`) |
-| `tombstone install-hook` | Install a post-commit hook that runs detect |
+| `epitaph init` | Create `.tombstones/` in the target repo (`--snippets` also injects the rule below) |
+| `epitaph snippets` | Inject the recommended `check_nogo` rule into `AGENTS.md` (and `CLAUDE.md` if present) — idempotent |
+| `epitaph add --attempt T --reason R [--scope P...] [--evidence R...] [--rejected-by WHO] [--retry-when W] [--date YYYY-MM-DD] [--confidence C] [--status S]` | Record a rejection (defaults to `candidate`) |
+| `epitaph approve <id>` | Promote a tombstone to `approved` (one human line) |
+| `epitaph overturn <id> --reason R` | A retry succeeded — keep the refutation on record |
+| `epitaph list [--status S] [--scope P]` | List tombstones, newest first |
+| `epitaph show <id>` | Print one tombstone in full |
+| `epitaph check [TEXT] [--file P]...` | Query by attempt text and/or files before retrying |
+| `epitaph detect [--full]` | Scan git history for reverts, draft candidate tombstones (incremental via `.cursor`) |
+| `epitaph install-hook` | Install a post-commit hook that runs detect |
 
 Global: `--repo PATH` (default: cwd, walking up), `--version`.
 
@@ -167,8 +167,8 @@ Global: `--repo PATH` (default: cwd, walking up), `--version`.
 |---|---|---|
 | Detect | deterministic rules (no LLM) | git revert commits today; never-merged PR closes, session give-up transitions, and CI-failure branch abandonment are on the roadmap |
 | Draft | optional LLM (v0.2) | v0.1 works fully without drafting |
-| Approve | one human line | `tombstone approve ts-...`. **An agent may never judge on its own** — a tombstone is testimony, not a verdict |
-| Query | MCP tools + CLI | `check_nogo` / `recent_tombstones` / `tombstone check` |
+| Approve | one human line | `epitaph approve ts-...`. **An agent may never judge on its own** — a tombstone is testimony, not a verdict |
+| Query | MCP tools + CLI | `check_nogo` / `recent_tombstones` / `epitaph check` |
 
 ## Principles
 
@@ -176,17 +176,17 @@ Global: `--repo PATH` (default: cwd, walking up), `--version`.
 - **Tombstones do not assert** — they record "this was rejected on this date for this reason"; they never claim "this is impossible". `retry_when` (the refutation condition) is expected on every record.
 - **Candidates allowed** — unapproved `candidate` records are kept and shown with lower confidence; approval friction is one line.
 - **Deterministic core (v0.1)** — detection and matching are plain rules; LLM drafting is a v0.2 option, never a dependency.
-- **Human approval required** — only `tombstone approve` (a human action) reaches `approved` confidence.
+- **Human approval required** — only `epitaph approve` (a human action) reaches `approved` confidence.
 
 ## Differentiation
 
-| Adjacent tool | How tombstone differs |
+| Adjacent tool | How epitaph differs |
 |---|---|
-| **[deadends.dev](https://github.com/dbwls99706/deadends.dev)** | Global, **error-signature**-centric ("don't `sudo pip` when you hit CUDA OOM") — not repo-scoped, community-curated, manually reported. tombstone: **repo-scoped**, **attempt-level** (the approach, not the error message), auto-detected, human-approved, expiring. **Not competitors — two layers**: global error signatures live there, project-context rejections live here. v1.x plans canon-ID cross-links so the layers interoperate. |
+| **[deadends.dev](https://github.com/dbwls99706/deadends.dev)** | Global, **error-signature**-centric ("don't `sudo pip` when you hit CUDA OOM") — not repo-scoped, community-curated, manually reported. epitaph: **repo-scoped**, **attempt-level** (the approach, not the error message), auto-detected, human-approved, expiring. **Not competitors — two layers**: global error signatures live there, project-context rejections live here. v1.x plans canon-ID cross-links so the layers interoperate. |
 | Mem0 / Letta / CLAUDE.md memory | Positive memory of successes and preferences. Negative memory needs its own data structure and its own query pattern (pre-flight lookup in the planning stage, not mid-chat recall). |
-| ADR (Architecture Decision Record) | Manual documents of *human design decisions*. tombstone records rejected *attempts*, with automatic detection and machine querying built in. |
+| ADR (Architecture Decision Record) | Manual documents of *human design decisions*. epitaph records rejected *attempts*, with automatic detection and machine querying built in. |
 | `.cursorrules` negative rules | Context-free commands ("don't do X"). A tombstone is a record with evidence, conditions, and an expiry path. |
-| yield-audit M9 (repeated inter-session knowledge cost) | Measurement (the size of the repeated tax) ↔ tombstone (removal of its single most expensive line item). They sell each other. |
+| yield-audit M9 (repeated inter-session knowledge cost) | Measurement (the size of the repeated tax) ↔ epitaph (removal of its single most expensive line item). They sell each other. |
 
 ## Privacy
 

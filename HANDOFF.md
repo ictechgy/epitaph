@@ -1,17 +1,20 @@
 # HANDOFF — what the next session should do
 
-State at writing: v0.1.0, 3 commits, 88/88 tests green, clean tree, **no remote, not on PyPI**.
+State at writing: v0.1.0 **shipped** — github.com/ictechgy/epitaph (CI green) and
+pypi.org/project/epitaph (trusted publishing via `.github/workflows/pypi.yml`, tag-triggered;
+`git tag vX.Y.Z && git push origin vX.Y.Z` releases). 96/96 tests green, clean tree.
 Read `AGENTS.md` first (invariants + gotchas), `기획서.md` for the original vision, README for UX.
 
-## 1. Do first (small, decided)
+## 1. Do first (small, decided) — ALL DONE
 
-- [ ] **Ship it**: create the GitHub repo, push, confirm the Actions CI workflow goes green
-      (`.github/workflows/ci.yml` exists but has never run).
+- [x] **Ship it** — DONE 2026-09-05: github.com/ictechgy/epitaph pushed, Actions CI green
+      (Python 3.10/3.13 matrix).
 - [x] **Name decision** — DONE 2026-09-05: dist/repo/console-script name is **`epitaph`**
       (PyPI + GitHub verified clear), and the import module moved to `src/epitaph/`
       before the first release (env var is now `EPITAPH_REPO`). Records stay
       "tombstones" in `.tombstones/`; user-facing strings say `epitaph <subcommand>`.
-- [ ] Publish to PyPI (after name), then flip README install line from "from a checkout" to real install commands (`uvx`/`pipx`).
+- [x] Publish to PyPI — DONE 2026-09-05 via Trusted Publishers (pypi.yml); README install
+      line flipped to `pipx install epitaph` / `uv tool install epitaph`.
 
 ## 2. v0.2 — the feature line (from 기획서, in order)
 
