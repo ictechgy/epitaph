@@ -56,10 +56,52 @@ def test_detect_creates_candidate_from_real_revert(repo):
 def test_detect_is_idempotent(repo):
     git(repo, "revert", "--no-edit", "HEAD")
     first = detect(repo)
+    # the scan position is recorded inside the ledger
+    assert (TombstoneStore(repo).dir / ".cursor").is_file()
+
+    # incremental: nothing new after the cursor, so nothing is even scanned
     second = detect(repo)
+    assert second.reverts == 0
     assert second.created == []
-    assert second.skipped == first.created
+
+    # a forced full rescan sees the same revert but never duplicates it
+    third = detect(repo, full=True)
+    assert third.created == []
+    assert third.skipped == first.created
     assert len(TombstoneStore(repo).all()) == 1
+
+
+def test_detect_incremental_scans_only_new_commits(repo):
+    git(repo, "revert", "--no-edit", "HEAD")
+    first = detect(repo)
+    assert first.reverts == 1
+
+    # a second, independent revert lands after the recorded cursor
+    # (stage only the new file: `add -A` would sweep the ledger itself into
+    # the commit, and reverting that commit would delete the tombstones)
+    (repo / "queue.py").write_text("Q = 1\n")
+    git(repo, "add", "queue.py")
+    git(repo, "commit", "-q", "-m", "Add queue module")
+    git(repo, "revert", "--no-edit", "HEAD")
+    second = detect(repo)
+    assert second.reverts == 1
+    assert len(second.created) == 1
+    assert len(TombstoneStore(repo).all()) == 2
+
+    # and a third run finds nothing new
+    third = detect(repo)
+    assert third.reverts == 0 and third.created == []
+
+
+def test_detect_survives_a_stale_cursor(repo):
+    git(repo, "revert", "--no-edit", "HEAD")
+    assert detect(repo).created
+    # simulate a history rewrite that strands the cursor sha
+    store = TombstoneStore(repo)
+    (store.dir / ".cursor").write_text("0" * 40 + "\n", encoding="utf-8")
+    report = detect(repo)  # falls back to a full scan instead of crashing
+    assert report.reverts == 1
+    assert report.skipped  # the previously created tombstone is still deduped
 
 
 def test_detect_ignores_non_revert_commits(repo):

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tombstone"
-version = "0.1.0"
+dynamic = ["version"]
 description = "A repo-scoped ledger of rejected agent attempts: structured tombstones for rolled-back patches, consulted before the next agent retries the same path."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,3 +35,6 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.setuptools.dynamic]
+version = { attr = "tombstone.__version__" }

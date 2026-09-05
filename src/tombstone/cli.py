@@ -10,6 +10,7 @@ from pathlib import Path
 from . import __version__
 from .detect import detect
 from .matcher import match_tombstones, normalized
+from .render import format_matches
 from .schema import (
     CONFIDENCE_VALUES,
     FIELDS,
@@ -183,33 +184,22 @@ def cmd_check(args):
     query = " ".join(args.query) if args.query else None
     if not query and not files:
         raise CliError("provide search text and/or --file (see `tombstone check --help`)")
-    store = _resolve_store(args, create=False)
-    matches = match_tombstones(query=query, files=files, tombstones=store.all())
-    if not matches:
-        print("no matching tombstones — nothing recorded against this attempt.")
+    # A storeless repo gets the same soft answer agents see over MCP —
+    # "nothing is known" is the truthful answer, not an error.
+    store = TombstoneStore.find(args.repo or ".")
+    if store is None:
+        print("no tombstones recorded here yet — nothing is known against this attempt.")
+        print("start a ledger with `tombstone init` (records land in .tombstones/).")
         return 0
-    print("%d tombstone(s) match:" % len(matches))
-    for match in matches:
-        t = match.tombstone
-        print("")
-        print(
-            "[%s/%s] %s  (rejected %s by %s)"
-            % (t.confidence, t.status, t.id, t.rejected_at, t.rejected_by)
-        )
-        print("  attempt: %s" % t.attempt)
-        print("  why matched: %s" % "; ".join(match.reasons))
-        print("  reason: %s" % (t.reason or "(none)"))
-        print("  retry_when: %s" % (t.retry_when or "(unspecified)"))
-    print("")
-    print(
-        "tombstones are testimony, not verdicts — verify retry_when before "
-        "treating a match as forbidden."
-    )
+    matches = match_tombstones(query=query, files=files, tombstones=store.all())
+    print(format_matches(matches))
+    if store.last_skipped:
+        print("warning: skipped unreadable file(s): %s" % ", ".join(store.last_skipped))
     return 0
 
 
 def cmd_detect(args):
-    report = detect(Path(args.repo or ".").resolve())
+    report = detect(Path(args.repo or ".").resolve(), full=args.full)
     for tomb_id in report.created:
         print("created %s (candidate)" % tomb_id)
     for tomb_id in report.skipped:
@@ -240,8 +230,9 @@ def cmd_install_hook(args):
         + "\n"
         + "# Installed by `tombstone install-hook`. Scans for reverts after each\n"
         + "# commit; must never fail the commit.\n"
-        + 'tombstone detect --repo "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" '
-        + ">/dev/null 2>&1 || true\n"
+        + "# --repo goes BEFORE the subcommand (top-level argparse option).\n"
+        + 'tombstone --repo "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" '
+        + "detect >/dev/null 2>&1 || true\n"
         + MARKER_END
         + "\n"
     )
@@ -335,6 +326,11 @@ def build_parser():
 
     p = sub.add_parser(
         "detect", help="scan git history for revert commits and draft candidate tombstones"
+    )
+    p.add_argument(
+        "--full",
+        action="store_true",
+        help="ignore the .cursor position and rescan the full history (never duplicates)",
     )
     p.set_defaults(func=cmd_detect)
 

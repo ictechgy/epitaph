@@ -108,3 +108,10 @@ def test_find_returns_none_without_store(tmp_path):
 
 def test_dirname():
     assert DIRNAME == ".tombstones"
+
+
+def test_get_rejects_non_tombstone_ids(tmp_path):
+    store = TombstoneStore(tmp_path)
+    # never touches the filesystem, so no traversal via crafted ids
+    assert store.get("../../evil") is None
+    assert store.get("") is None

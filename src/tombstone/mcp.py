@@ -18,6 +18,7 @@ from pathlib import Path
 
 from . import __version__
 from .matcher import match_tombstones, normalized
+from .render import format_matches
 from .store import TombstoneStore
 
 PROTOCOL_VERSION = "2024-11-05"
@@ -187,30 +188,9 @@ class Server:
                 "no tombstones recorded in %s yet — nothing known against this "
                 "attempt. Record rejections with `tombstone add`." % self.store.dir
             )
-        matches = match_tombstones(query=attempt or None, files=files or [], tombstones=records)
-        if not matches:
-            return (
-                "no matching tombstones — nothing recorded against this attempt."
-                " Proceed, and consider `tombstone add` if it gets rejected."
-            )
-        lines = ["%d tombstone(s) match:" % len(matches)]
-        for match in matches:
-            t = match.tombstone
-            lines.append("")
-            lines.append(
-                "[%s/%s] %s  (rejected %s by %s)"
-                % (t.confidence, t.status, t.id, t.rejected_at, t.rejected_by)
-            )
-            lines.append("  attempt: %s" % t.attempt)
-            lines.append("  why matched: %s" % "; ".join(match.reasons))
-            lines.append("  reason: %s" % (t.reason or "(none)"))
-            lines.append("  retry_when: %s" % (t.retry_when or "(unspecified)"))
-        lines.append("")
-        lines.append(
-            "tombstones are testimony, not verdicts — verify retry_when before "
-            "treating a match as forbidden."
+        return format_matches(
+            match_tombstones(query=attempt or None, files=files or [], tombstones=records)
         )
-        return "\n".join(lines)
 
     def _recent(self, args):
         scope = args.get("scope")

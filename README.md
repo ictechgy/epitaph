@@ -51,7 +51,7 @@ Or install a post-commit hook that runs detect automatically (it can never fail 
 tombstone install-hook
 ```
 
-`detect` is idempotent: the tombstone id is derived from the revert sha, so re-running never duplicates.
+`detect` is incremental and idempotent: it remembers the last scanned commit in `.tombstones/.cursor` (so the post-commit hook only pays for new history), and the tombstone id is derived from the revert sha, so even a forced full rescan (`tombstone detect --full`) never duplicates. If a history rewrite strands the cursor, detect falls back to a full scan automatically.
 
 ### Record schema (one JSON file per tombstone in `.tombstones/`)
 
@@ -128,12 +128,12 @@ a different path. Tombstones are records of past rejections, not bans.
 | `tombstone list [--status S] [--scope P]` | List tombstones, newest first |
 | `tombstone show <id>` | Print one tombstone in full |
 | `tombstone check [TEXT] [--file P]...` | Query by attempt text and/or files before retrying |
-| `tombstone detect` | Scan git history for reverts, draft candidate tombstones |
+| `tombstone detect [--full]` | Scan git history for reverts, draft candidate tombstones (incremental via `.cursor`) |
 | `tombstone install-hook` | Install a post-commit hook that runs detect |
 
 Global: `--repo PATH` (default: cwd, walking up), `--version`.
 
-`check` uses deterministic normalized substring and token-overlap matching (0.5 containment for multi-token queries, exact token for single tokens) against `attempt + reason + scope`, and also matches queried files against scope anchors. Every hit prints its confidence and *why* it matched.
+`check` uses deterministic normalized substring and token-overlap matching (0.5 containment for multi-token queries, exact token for single tokens) against `attempt + reason` — scope paths are full of common words and only match via `--file` — and also matches queried files against scope anchors in both directions. Every hit prints its confidence and *why* it matched; on a repo without a ledger it answers softly (`nothing recorded here yet`) instead of erroring, matching the MCP behavior agents see.
 
 ## Workflow: detect -> draft -> approve -> query
 

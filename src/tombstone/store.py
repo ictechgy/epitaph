@@ -70,6 +70,10 @@ class TombstoneStore:
         )
 
     def get(self, tomb_id: str):
+        # Validate the id before it ever touches the filesystem, so a
+        # traversing argument can't read arbitrary .json files.
+        if not ID_RE.match(tomb_id or ""):
+            return None
         path = self.path_for(tomb_id)
         if not path.exists():
             return None

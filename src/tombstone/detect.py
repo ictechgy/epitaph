@@ -40,25 +40,36 @@ def _git(repo, *args, check=True):
     return proc
 
 
-def scan_reverts(repo):
-    """[(sha, subject, body, date)] for every commit in the repo."""
-    proc = _git(
-        repo,
-        "log",
-        "--date=short",
-        # %x1e terminates each record, so multi-line bodies (%b) and
-        # multi-commit logs both parse: fields never contain \x1f, records
-        # never contain \x1e.
-        "--pretty=format:%H%x1f%s%x1f%b%x1f%ad%x1e",
-        check=False,
-    )
+def scan_reverts(repo, since=None):
+    """[(sha, subject, body, committer-date)] newest first.
+
+    With ``since`` (a commit sha), only commits after it are scanned — the
+    incremental path the post-commit hook relies on. If the cursor sha is no
+    longer reachable (history rewrite), fall back to a full scan.
+    """
+    # %x1e terminates each record, so multi-line bodies (%b) and
+    # multi-commit logs both parse: fields never contain \x1f, records
+    # never contain \x1e. %cd (committer date) keeps rejected_at on the
+    # wall-clock order of the history even after rebases.
+    fmt = "--pretty=format:%H%x1f%s%x1f%b%x1f%cd%x1e"
+    if since:
+        proc = _git(repo, "log", since + "..HEAD", "--date=short", fmt, check=False)
+        if proc.returncode != 0:
+            since = None
+        else:
+            return _parse_log(proc.stdout)
+    proc = _git(repo, "log", "--date=short", fmt, check=False)
     if proc.returncode != 0:
         # An unborn branch (no commits yet) is a normal empty result.
         if "does not have any commits yet" in proc.stderr:
             return []
         raise DetectError("`git log` failed: %s" % proc.stderr.strip())
+    return _parse_log(proc.stdout)
+
+
+def _parse_log(stdout):
     commits = []
-    for chunk in proc.stdout.split(_RECORD):
+    for chunk in stdout.split(_RECORD):
         parts = chunk.strip("\n").split(_FIELD)
         if len(parts) != 4:
             continue
@@ -94,11 +105,23 @@ def _commit_files(repo, sha):
     return sorted({line.strip() for line in out.splitlines() if line.strip()})
 
 
-def detect(repo, store=None) -> DetectReport:
+def detect(repo, store=None, full=False) -> DetectReport:
     repo = Path(repo).resolve()
     store = store or TombstoneStore(repo)
     report = DetectReport()
-    for sha, subject, body, date in scan_reverts(repo):
+
+    # Incremental by default: a `.cursor` file records the last scanned
+    # commit, so the post-commit hook only pays for new history. The cursor
+    # lives inside .tombstones/, so deleting the ledger also deletes the
+    # cursor and the next detect rescans everything.
+    cursor = store.dir / ".cursor"
+    since = None
+    if not full and cursor.is_file():
+        recorded = cursor.read_text(encoding="utf-8").strip()
+        if recorded:
+            since = recorded
+
+    for sha, subject, body, date in scan_reverts(repo, since=since):
         if not is_revert(subject, body):
             continue
         report.reverts += 1
@@ -138,4 +161,12 @@ def detect(repo, store=None) -> DetectReport:
             )
         )
         report.created.append(tomb.id)
+
+    # Persist the scan position only when a ledger already exists: an empty
+    # scan on a storeless repo must not silently create .tombstones/ and
+    # hide the fact that no ledger was ever started.
+    if store.exists():
+        head = _git(repo, "rev-parse", "HEAD", check=False)
+        if head.returncode == 0 and head.stdout.strip():
+            cursor.write_text(head.stdout.strip() + "\n", encoding="utf-8")
     return report

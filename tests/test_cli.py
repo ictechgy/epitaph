@@ -1,10 +1,13 @@
 import os
 import re
 import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 
 from tombstone.cli import main
+from tombstone.store import TombstoneStore
 
 
 def _git(cwd, *args):
@@ -161,7 +164,7 @@ def test_install_hook_and_idempotency(tmp_path, monkeypatch, capsys):
     content = hook.read_text()
     assert "#!/bin/sh" in content
     assert "# >>> tombstone >>>" in content
-    assert "tombstone detect" in content
+    assert "--repo" in content and " detect " in content  # subcommand last: argparse requires it
     assert os.access(hook, os.X_OK)
 
     assert main(["install-hook"]) == 0
@@ -200,3 +203,44 @@ def test_detect_and_approve_cli_end_to_end(tmp_path, capsys):
     assert main(["--repo", str(r), "check", "feature flag"]) == 0
     check = capsys.readouterr().out
     assert tid in check and "approved" in check
+
+
+def test_check_without_store_is_soft(tmp_path, capsys):
+    # no .tombstones anywhere above tmp_path: agents get an answer, not an error
+    assert main(["--repo", str(tmp_path), "check", "redis lock"]) == 0
+    out = capsys.readouterr().out
+    assert "no tombstones recorded here yet" in out
+
+
+def test_installed_hook_actually_detects(tmp_path, capsys):
+    # regression: the hook used to emit `tombstone detect --repo ...`, which
+    # argparse rejects (--repo is a top-level option and must precede the
+    # subcommand) — the hook then silently did nothing.
+    r = tmp_path / "hooked"
+    r.mkdir()
+    _git(r, "init", "-q")
+    _git(r, "config", "user.email", "test@example.com")
+    _git(r, "config", "user.name", "Test")
+    (r / "m.py").write_text("X = 1\n")
+    _git(r, "add", "-A")
+    _git(r, "commit", "-q", "-m", "Add m")
+    _git(r, "revert", "--no-edit", "HEAD")
+    assert main(["--repo", str(r), "install-hook"]) == 0
+    # run the hook exactly as git would (cwd inside the repo, tombstone on PATH)
+    # the hook invokes bare `tombstone` from PATH — point PATH at this
+    # venv's bin (where the console script lives), as a real install would
+    venv_bin = Path(sys.executable).parent
+    env = dict(os.environ, PATH=str(venv_bin) + os.pathsep + os.environ.get("PATH", ""))
+    proc = subprocess.run(
+        ["sh", str(r / ".git" / "hooks" / "post-commit")],
+        cwd=str(r),
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert proc.returncode == 0
+    store = TombstoneStore(r)
+    records = store.all()
+    assert len(records) == 1
+    assert records[0].attempt == "Add m"
+    assert (store.dir / ".cursor").is_file()
